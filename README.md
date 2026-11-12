@@ -33,3 +33,18 @@ Expo / React Native starter connected to Firebase Authentication and Cloud Fires
 The current screen is a Firebase connection test. Weather data, forecast UI, real audio playback, and scheduled notifications are not implemented in this test build.
 
 Never add service-account keys or private credentials to this repository.
+
+
+## AI weather podcast setup
+
+The app now includes a podcast player that turns the loaded weather conditions into a spoken English briefing. Audio is synthesized by Google Cloud Text-to-Speech using Neural2 voices (Maya and Noah).
+
+Before the audio button can work in a deployed app:
+
+1. In Google Cloud Console for Firebase project `weather-podcast-5cb7c`, enable the **Cloud Text-to-Speech API**.
+2. Firebase Cloud Functions deployments require the Firebase **Blaze** billing plan. Review the current Firebase and Google Cloud pricing first, and configure budget alerts before enabling billing.
+3. From the repository root, run `npm install` and `npm install --prefix functions`.
+4. Deploy only the callable audio function with `npx firebase-tools deploy --only functions:generatePodcast` (or install/use the Firebase CLI and run `firebase deploy --only functions:generatePodcast`).
+5. Reload the app. Sign-in is anonymous; the callable function rejects unauthenticated requests. The Google Cloud service account is used server-side; no API key is stored in the mobile app.
+
+Audio is generated only after the user taps **Generate AI audio**. The current first version creates an English briefing; additional languages and longer-form AI-written podcast scripts are future enhancements.
