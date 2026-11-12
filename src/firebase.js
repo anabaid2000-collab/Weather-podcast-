@@ -1,9 +1,8 @@
-// SkyCast Firebase setup
-// Firebase client configuration is not a private key. Protect your data with
-// Firebase Authentication and Firestore Security Rules.
-
+// SkyCast Firebase client setup. Never place service-account credentials in this app.
 import { initializeApp, getApps, getApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
+import { initializeAuth, getAuth, getReactNativePersistence, signInAnonymously } from "firebase/auth";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const firebaseConfig = {
   apiKey: "AIzaSyBCBdCwQ5KFbO0GacQ_h_9hF4mPs0IzW60",
@@ -17,3 +16,10 @@ const firebaseConfig = {
 
 export const firebaseApp = getApps().length ? getApp() : initializeApp(firebaseConfig);
 export const db = getFirestore(firebaseApp);
+let authInstance;
+try {
+  authInstance = initializeAuth(firebaseApp, { persistence: getReactNativePersistence(AsyncStorage) });
+} catch {
+  authInstance = getAuth(firebaseApp);
+}
+export const auth = authInstance;
