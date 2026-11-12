@@ -2,19 +2,30 @@
 
 Expo / React Native starter connected to Firebase Authentication and Cloud Firestore.
 
+## Runtime requirements
+
+- Node.js 22.13 or newer
+- Expo SDK 58
+- React 19.3
+- React Native 0.88
+
+## Run locally
+
+1. Install Node.js 22.13 or newer.
+2. Run `npm install`.
+3. Run `npx expo-doctor` to check the project.
+4. Run `npx expo start --tunnel`.
+5. Open the project with the matching Expo Go SDK or a development build.
+
 ## Included
+
 - Anonymous Firebase sign-in
 - Per-user Firestore preferences at `users/{uid}`
 - Language, narrator, and daily-reminder preference controls
 - Firebase client configuration in `src/firebase.js`
 
-## Run locally
-1. Install Node.js and npm.
-2. Run `npm install`.
-3. Run `npx expo start`.
-4. Open the project with Expo Go or an Android emulator.
-
 ## Firebase setup
+
 - Enable Anonymous sign-in in Firebase Authentication.
 - Create a Cloud Firestore database.
 - Publish rules that allow an authenticated user to read/write only `users/{their uid}`.
