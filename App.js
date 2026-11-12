@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, StatusBar, StyleSheet, Text, TextInput, View } from "react-native";
 import { colors, spacing, radius } from "./src/theme";
+import PodcastPanel from "./src/podcast";
 
 const codes = {
   0: ["Clear sky", "☀️"], 1: ["Mainly clear", "🌤️"], 2: ["Partly cloudy", "⛅"], 3: ["Overcast", "☁️"],
@@ -80,6 +81,7 @@ export default function App() {
         </View>
         <Text style={styles.timestamp}>Weather data provided by Open-Meteo.</Text>
       </> : null}
+      <PodcastPanel current={current} place={place} />
       <Pressable onPress={() => search(city)} style={styles.refresh}><Text style={styles.refreshText}>↻  Refresh forecast</Text></Pressable>
     </ScrollView>
   </View>;
