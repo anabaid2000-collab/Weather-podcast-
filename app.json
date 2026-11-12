@@ -5,7 +5,19 @@
     "version": "1.1.0",
     "orientation": "portrait",
     "userInterfaceStyle": "dark",
-    "android": { "package": "com.skycast.weatherpodcast" },
-    "ios": { "bundleIdentifier": "com.skycast.weatherpodcast" }
+    "android": {
+      "package": "com.skycast.weatherpodcast"
+    },
+    "ios": {
+      "bundleIdentifier": "com.skycast.weatherpodcast"
+    },
+    "plugins": [
+      [
+        "expo-audio",
+        {
+          "enableBackgroundPlayback": true
+        }
+      ]
+    ]
   }
 }
