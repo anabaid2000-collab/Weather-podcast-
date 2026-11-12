@@ -12,6 +12,7 @@ export default function App() {
   const [voice, setVoice] = useState("Maya · Female");
   const [reminder, setReminder] = useState(true);
   const [status, setStatus] = useState("Connecting to SkyCast…");
+  const [profileLoaded, setProfileLoaded] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -31,7 +32,7 @@ export default function App() {
               if (p.voice) setVoice(p.voice);
               if (typeof p.reminder === "boolean") setReminder(p.reminder);
             }
-            if (active) setStatus("Connected · preferences loaded");
+            if (active) { setProfileLoaded(true); setStatus("Connected · preferences loaded"); }
           } catch (e) { if (active) setStatus("Signed in, but Firestore read failed: " + e.message); }
         });
       } catch (e) { if (active) setStatus("Firebase sign-in failed: " + e.message); }
@@ -40,7 +41,7 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    if (!uid) return;
+    if (!uid || !profileLoaded) return;
     const save = async () => {
       try {
         await setDoc(doc(db, "users", uid), { language, voice, reminder, updatedAt: new Date().toISOString() }, { merge: true });
@@ -48,7 +49,7 @@ export default function App() {
       } catch (e) { setStatus("Save failed: " + e.message); }
     };
     save();
-  }, [uid, language, voice, reminder]);
+  }, [uid, profileLoaded, language, voice, reminder]);
 
   return <SafeAreaView style={s.page}>
     <Text style={s.brand}>✦ SKYCAST</Text>
