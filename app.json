@@ -1,0 +1,11 @@
+{
+  "expo": {
+    "name": "SkyCast",
+    "slug": "skycast-weather-podcast",
+    "version": "1.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "android": { "package": "com.skycast.weatherpodcast" },
+    "ios": { "bundleIdentifier": "com.skycast.weatherpodcast" }
+  }
+}
