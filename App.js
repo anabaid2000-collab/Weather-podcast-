@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, Linking, Pressable, ScrollView, StatusBar, StyleSheet, Text, TextInput, View } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { colors, spacing, radius } from "./src/theme";
@@ -36,7 +36,9 @@ async function getWeather(city) {
   let air = null;
   if (airResponse?.ok) {
     const result = await airResponse.json();
-    const index = Math.max(0, (result.hourly?.time || []).findIndex((time) => time >= forecast.current.time));
+    const times = result.hourly?.time || [];
+    const matchingIndex = times.findIndex((time) => time >= forecast.current.time);
+    const index = matchingIndex < 0 ? Math.max(0, times.length - 1) : matchingIndex;
     air = { aqi: result.hourly?.us_aqi?.[index], pm25: result.hourly?.pm2_5?.[index], pm10: result.hourly?.pm10?.[index] };
   }
   return { forecast, air };
@@ -51,26 +53,39 @@ export default function App() {
   const [favorites, setFavorites] = useState([]);
   const [compare, setCompare] = useState([]);
   const [comparing, setComparing] = useState(false);
+  const latestWeatherRequest = useRef(0);
 
   const loadCity = useCallback(async (name) => {
     const value = name.trim();
     if (!value) { setError("Enter a city name."); return; }
+    const requestId = ++latestWeatherRequest.current;
     setLoading(true); setError("");
     try {
       const city = await getCity(value);
       const result = await getWeather(city);
+      if (requestId !== latestWeatherRequest.current) return;
       setPlace(city); setData(result); setQuery(city.name); setCompare([]);
-    } catch (err) { setError(err.message || "Could not load weather."); }
-    finally { setLoading(false); }
+    } catch (err) {
+      if (requestId === latestWeatherRequest.current) setError(err.message || "Could not load weather.");
+    } finally {
+      if (requestId === latestWeatherRequest.current) setLoading(false);
+    }
   }, []);
 
   useEffect(() => {
     let active = true;
     AsyncStorage.getItem(FAVORITES_KEY).then((raw) => {
-      if (active && raw) setFavorites(JSON.parse(raw));
+      if (!active || !raw) return;
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        setFavorites([...new Set(parsed.filter((item) => typeof item === "string" && item.trim()))].slice(0, 6));
+      }
     }).catch(() => {});
     loadCity("Chattogram");
-    return () => { active = false; };
+    return () => {
+      active = false;
+      latestWeatherRequest.current += 1;
+    };
   }, [loadCity]);
 
   const saveFavorites = async (next) => {
