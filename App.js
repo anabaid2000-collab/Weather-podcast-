@@ -58,6 +58,15 @@ export default function App() {
   const [compare, setCompare] = useState([]);
   const [comparing, setComparing] = useState(false);
   const latestWeatherRequest = useRef(0);
+  const [unit, setUnit] = useState("C");
+  const [alertsEnabled, setAlertsEnabled] = useState(true);
+  const [travelQuery, setTravelQuery] = useState("");
+  const [travelResult, setTravelResult] = useState(null);
+  const [travelLoading, setTravelLoading] = useState(false);
+  const [travelError, setTravelError] = useState("");
+  const [offlineCopy, setOfflineCopy] = useState(false);
+  const temp = (value) => number(unit === "F" && Number.isFinite(value) ? value * 9 / 5 + 32 : value, "°" + unit);
+
 
   const loadCity = useCallback(async (name) => {
     const value = name.trim();
@@ -68,7 +77,8 @@ export default function App() {
       const city = await getCity(value);
       const result = await getWeather(city);
       if (requestId !== latestWeatherRequest.current) return;
-      setPlace(city); setData(result); setQuery(city.name); setCompare([]);
+      setPlace(city); setData(result); setQuery(city.name); setCompare([]); setOfflineCopy(false);
+      try { await AsyncStorage.setItem("skycast.lastWeather.v1", JSON.stringify({ place: city, data: result, savedAt: Date.now() })); } catch {}
     } catch (err) {
       if (requestId === latestWeatherRequest.current) setError(err.message || "Could not load weather.");
     } finally {
@@ -86,6 +96,18 @@ export default function App() {
       try {
         const raw = await AsyncStorage.getItem(FAVORITES_KEY);
         localCities = cleanCities(raw ? JSON.parse(raw) : []);
+        const cached = await AsyncStorage.getItem("skycast.lastWeather.v1");
+        if (cached) {
+          const saved = JSON.parse(cached);
+          if (saved?.place && saved?.data?.forecast?.current) {
+            if (active) { setPlace(saved.place); setData(saved.data); setQuery(saved.place.name); setLoading(false); setOfflineCopy(true); }
+          }
+        }
+        const localPrefs = await AsyncStorage.getItem("skycast.preferences.v1");
+        if (localPrefs) {
+          const prefs = JSON.parse(localPrefs);
+          if (active) { setUnit(prefs.unit === "F" ? "F" : "C"); setAlertsEnabled(prefs.alertsEnabled !== false); }
+        }
         if (active) setFavorites(localCities);
       } catch {}
       try {
@@ -94,6 +116,12 @@ export default function App() {
         const userRef = doc(db, "users", userId);
         const snapshot = await getDoc(userRef);
         const remoteCities = snapshot.exists() ? cleanCities(snapshot.data().favoriteCities) : [];
+        const remotePrefs = snapshot.exists() ? snapshot.data().preferences : null;
+        if (remotePrefs && active) {
+          setUnit(remotePrefs.unit === "F" ? "F" : "C");
+          setAlertsEnabled(remotePrefs.alertsEnabled !== false);
+          await AsyncStorage.setItem("skycast.preferences.v1", JSON.stringify({ unit: remotePrefs.unit === "F" ? "F" : "C", alertsEnabled: remotePrefs.alertsEnabled !== false }));
+        }
         const mergedCities = cleanCities([...remoteCities, ...localCities]);
         await setDoc(userRef, { favoriteCities: mergedCities, updatedAt: serverTimestamp() }, { merge: true });
         if (active) {
@@ -127,6 +155,39 @@ export default function App() {
       }
     }
   };
+  const savePreferences = async (next) => {
+    if (next.unit) setUnit(next.unit);
+    if (typeof next.alertsEnabled === "boolean") setAlertsEnabled(next.alertsEnabled);
+    const prefs = { unit: next.unit || unit, alertsEnabled: typeof next.alertsEnabled === "boolean" ? next.alertsEnabled : alertsEnabled };
+    try { await AsyncStorage.setItem("skycast.preferences.v1", JSON.stringify(prefs)); } catch {}
+    if (firebaseUserId) {
+      try { await setDoc(doc(db, "users", firebaseUserId), { preferences: prefs, updatedAt: serverTimestamp() }, { merge: true }); } catch {}
+    }
+  };
+
+  const planTravel = async () => {
+    if (!travelQuery.trim()) { setTravelError("Enter a destination city."); return; }
+    setTravelLoading(true); setTravelError(""); setTravelResult(null);
+    try {
+      const city = await getCity(travelQuery);
+      const result = await getWeather(city);
+      setTravelResult({ city, data: result });
+    } catch (err) { setTravelError(err.message || "Could not load destination forecast."); }
+    finally { setTravelLoading(false); }
+  };
+
+  const smartAlerts = useMemo(() => {
+    if (!current || !daily) return [];
+    const alerts = [];
+    const rain = daily.precipitation_probability_max?.[0] ?? 0;
+    const uv = daily.uv_index_max?.[0] ?? 0;
+    if (rain >= 60) alerts.push({ icon: "☂️", title: "Rain likely", detail: rain + "% chance today. Consider carrying an umbrella." });
+    if (uv >= 8) alerts.push({ icon: "☀️", title: "Very high UV", detail: "Plan shade and sun protection around midday." });
+    if (Number.isFinite(aqi) && aqi > 100) alerts.push({ icon: "🌫️", title: "Air quality alert", detail: "Air quality may affect sensitive groups. Check local conditions before extended outdoor activity." });
+    if (current.wind_speed_10m >= 40) alerts.push({ icon: "💨", title: "Strong wind", detail: "Wind speeds are elevated. Take care outdoors." });
+    return alerts;
+  }, [current, daily, aqi]);
+
   const isFavorite = !!place && favorites.some((item) => item.toLowerCase() === place.name.toLowerCase());
   const toggleFavorite = () => {
     if (!place) return;
@@ -197,7 +258,7 @@ export default function App() {
             <Pressable accessibilityRole="button" accessibilityLabel={isFavorite ? "Remove saved city" : "Save city"} onPress={toggleFavorite} style={styles.favorite}><Text style={styles.favoriteText}>{isFavorite ? "★ Saved" : "☆ Save city"}</Text></Pressable>
             <Text style={styles.heroIcon}>{condition[1]}</Text>
           </View>
-          <Text style={styles.temperature}>{number(current.temperature_2m,"°")}</Text>
+          <Text style={styles.temperature}>{temp(current.temperature_2m)}</Text>
           <Text style={styles.condition}>{condition[0]}</Text>
           <Text style={styles.muted}>Feels like {number(current.apparent_temperature,"°C")}</Text>
           <View style={styles.metrics}>
@@ -233,7 +294,7 @@ export default function App() {
             {hourly?.time?.slice(hourlyStart,hourlyStart+12).map((time,i) => <View key={time} style={styles.hourCard}>
               <Text style={styles.hourTime}>{clockLabel(time)}</Text>
               <Text style={styles.hourIcon}>{describe(hourly.weather_code?.[i+hourlyStart] ?? daily.weather_code[0])[1]}</Text>
-              <Text style={styles.hourTemp}>{number(hourly.temperature_2m[i+hourlyStart],"°")}</Text>
+              <Text style={styles.hourTemp}>{temp(hourly.temperature_2m[i+hourlyStart])}</Text>
               <Text style={styles.hourRain}>☂ {number(hourly.precipitation_probability[i+hourlyStart],"%")}</Text>
             </View>)}
           </ScrollView>
@@ -244,13 +305,109 @@ export default function App() {
           <View style={styles.forecast}>
             {daily.time.map((date,i) => { const w=describe(daily.weather_code[i]); return <View key={date} style={styles.forecastRow}>
               <Text style={styles.day}>{dayLabel(date,i)}</Text><Text style={styles.forecastIcon}>{w[1]}</Text><Text style={styles.forecastCondition}>{w[0]}</Text>
-              <Text style={styles.high}>{number(daily.temperature_2m_max[i],"°")}</Text><Text style={styles.low}>{number(daily.temperature_2m_min[i],"°")}</Text>
+              <Text style={styles.high}>{temp(daily.temperature_2m_max[i])}</Text><Text style={styles.low}>{temp(daily.temperature_2m_min[i])}</Text>
               <Text style={styles.rainChance}>☂ {number(daily.precipitation_probability_max[i],"%")}</Text>
             </View>; })}
           </View>
           <Text style={styles.timestamp}>Sunrise {daily.sunrise?.[0] ? clockLabel(daily.sunrise[0]) : "—"} · Sunset {daily.sunset?.[0] ? clockLabel(daily.sunset[0]) : "—"}</Text>
         </View>
       </> : null}
+
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Rain predictor</Text>
+          <View style={styles.featureCard}>
+            <Text style={styles.featureHint}>NEXT 12 HOURS · CHANCE OF RAIN</Text>
+            {hourly?.time?.slice(hourlyStart,hourlyStart+12).map((time,i) => {
+              const chance = hourly.precipitation_probability?.[i+hourlyStart] ?? 0;
+              return <View key={"rain-"+time} style={styles.rainRow}>
+                <Text style={styles.featureText}>{clockLabel(time)}</Text>
+                <View style={styles.rainTrack}><View style={[styles.rainFill,{width:Math.max(0,Math.min(100,chance))+"%"}]}/></View>
+                <Text style={styles.rainValue}>{Math.round(chance)}%</Text>
+              </View>;
+            })}
+          </View>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Sky & sun tracker</Text>
+          <View style={styles.featureCard}>
+            <View style={styles.sunRow}>
+              <View style={styles.sunMetric}><Text style={styles.sunIcon}>🌅</Text><Text style={styles.featureHint}>SUNRISE</Text><Text style={styles.sunValue}>{daily.sunrise?.[0] ? clockLabel(daily.sunrise[0]) : "—"}</Text></View>
+              <View style={styles.sunMetric}><Text style={styles.sunIcon}>🌇</Text><Text style={styles.featureHint}>SUNSET</Text><Text style={styles.sunValue}>{daily.sunset?.[0] ? clockLabel(daily.sunset[0]) : "—"}</Text></View>
+            </View>
+            <Text style={styles.featureText}>Daylight duration · {daily.sunrise?.[0] && daily.sunset?.[0] ? (() => { const minutes = Math.max(0,Math.round((new Date(daily.sunset[0])-new Date(daily.sunrise[0]))/60000)); return Math.floor(minutes/60)+"h "+(minutes%60)+"m"; })() : "Unavailable"}</Text>
+          </View>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>What should I carry?</Text>
+          <View style={styles.featureCard}>
+            {(daily.precipitation_probability_max?.[0] >= 40 ? ["☂️ Umbrella or raincoat"] : ["🕶️ Sunglasses if heading into bright sunshine"]).concat(
+              (daily.uv_index_max?.[0] >= 6 ? ["🧴 Sun protection and a cap"] : []),
+              (current.temperature_2m >= 30 ? ["💧 Water bottle"] : current.temperature_2m <= 18 ? ["🧥 A light warm layer"] : ["👟 Comfortable shoes"]),
+              (current.wind_speed_10m >= 25 ? ["💨 Secure loose items outdoors"] : [])
+            ).map((item) => <Text key={item} style={styles.featureText}>{item}</Text>)}
+            <Text style={styles.featureHint}>Suggestions are based on the current forecast, not a safety guarantee.</Text>
+          </View>
+        </View>
+
+        <View style={styles.section}>
+          <View style={styles.sectionTop}><Text style={styles.sectionTitle}>Weather calendar</Text><Text style={styles.eyebrow}>7-DAY VIEW</Text></View>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.calendarRow}>
+            {daily.time.map((date,i) => <View key={"calendar-"+date} style={styles.calendarCard}>
+              <Text style={styles.featureHint}>{dayLabel(date,i)}</Text>
+              <Text style={styles.calendarIcon}>{describe(daily.weather_code[i])[1]}</Text>
+              <Text style={styles.featureText}>{temp(daily.temperature_2m_max[i])}</Text>
+              <Text style={styles.featureHint}>☂ {number(daily.precipitation_probability_max?.[i],"%")}</Text>
+            </View>)}
+          </ScrollView>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Smart weather alerts</Text>
+          <View style={styles.featureCard}>
+            <Pressable onPress={() => savePreferences({alertsEnabled:!alertsEnabled})} style={styles.settingRow}>
+              <Text style={styles.featureText}>Show weather alerts in SkyCast</Text>
+              <Text style={styles.settingValue}>{alertsEnabled ? "ON" : "OFF"}</Text>
+            </Pressable>
+            {alertsEnabled ? (smartAlerts.length ? smartAlerts.map((alert) => <View key={alert.title} style={styles.alertLine}><Text style={styles.featureText}>{alert.icon}  {alert.title}</Text><Text style={styles.muted}>{alert.detail}</Text></View>) : <Text style={styles.muted}>No high-priority weather alerts for this forecast.</Text>) : <Text style={styles.muted}>Weather alert cards are currently turned off.</Text>}
+            <Text style={styles.featureHint}>These are in-app alerts. Device notifications can be added in a later setup step.</Text>
+          </View>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Personal dashboard</Text>
+          <View style={styles.featureCard}>
+            <Text style={styles.featureText}>Temperature unit</Text>
+            <View style={styles.unitRow}>
+              <Pressable onPress={() => savePreferences({unit:"C"})} style={[styles.unitButton,unit==="C"&&styles.unitActive]}><Text style={[styles.unitText,unit==="C"&&styles.unitTextActive]}>Celsius °C</Text></Pressable>
+              <Pressable onPress={() => savePreferences({unit:"F"})} style={[styles.unitButton,unit==="F"&&styles.unitActive]}><Text style={[styles.unitText,unit==="F"&&styles.unitTextActive]}>Fahrenheit °F</Text></Pressable>
+            </View>
+            <Text style={styles.featureHint}>Your preferences are saved on this device and synced to Firebase when signed in.</Text>
+            <Text style={styles.featureText}>Saved places · {favorites.length}/6</Text>
+            <Text style={styles.muted}>Your favourite cities and unit preference stay available after reopening SkyCast.</Text>
+          </View>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Travel weather planner</Text>
+          <View style={styles.featureCard}>
+            <Text style={styles.muted}>Check the forecast for a destination before you travel.</Text>
+            <View style={styles.searchRow}>
+              <TextInput accessibilityLabel="Travel destination" value={travelQuery} onChangeText={setTravelQuery} onSubmitEditing={planTravel} returnKeyType="search" placeholder="Destination city" placeholderTextColor={colors.muted} style={styles.input}/>
+              <Pressable onPress={planTravel} style={styles.button}><Text style={styles.buttonText}>Check</Text></Pressable>
+            </View>
+            {travelLoading ? <ActivityIndicator color={colors.accent}/> : null}
+            {travelError ? <Text style={styles.inlineError}>{travelError}</Text> : null}
+            {travelResult ? <View style={styles.travelResult}>
+              <Text style={styles.place}>{travelResult.city.name}, {travelResult.city.country}</Text>
+              <Text style={styles.compareTemp}>{temp(travelResult.data.forecast.current.temperature_2m)} · {describe(travelResult.data.forecast.current.weather_code)[0]}</Text>
+              <Text style={styles.muted}>Feels like {temp(travelResult.data.forecast.current.apparent_temperature)} · Rain chance today {number(travelResult.data.forecast.daily.precipitation_probability_max?.[0],"%")}</Text>
+              <Pressable onPress={() => loadCity(travelResult.city.name)} style={styles.mapLink}><Text style={styles.mapLinkText}>Open destination forecast on Home →</Text></Pressable>
+            </View> : null}
+          </View>
+        </View>
 
       <View style={styles.section}>
         <View style={styles.sectionTop}><Text style={styles.sectionTitle}>City comparison</Text><Text style={styles.eyebrow}>YOUR SAVED PLACES</Text></View>
@@ -260,7 +417,7 @@ export default function App() {
         </Pressable>
         {compare.map((item) => <View key={item.name} style={styles.compareRow}><Text style={styles.place}>{item.name}</Text><Text style={styles.compareCondition}>{describe(item.code)[1]} {describe(item.code)[0]}</Text><Text style={styles.compareTemp}>{number(item.temperature,"°C")}</Text></View>)}
       </View>
-      <Text style={styles.footer}>Weather and air-quality data by Open-Meteo. Forecasts are estimates and can change.</Text>
+      <Text style={styles.footer}>{offlineCopy ? "Offline mode · Showing your last saved forecast. Reconnect to refresh live data. " : ""}Weather and air-quality data by Open-Meteo. Forecasts are estimates and can change.</Text>
       <Pressable onPress={() => loadCity(place?.name || query)} style={styles.refresh}><Text style={styles.refreshText}>↻  Refresh forecast</Text></Pressable>
     </ScrollView>
   </View>;
@@ -299,5 +456,13 @@ const styles = StyleSheet.create({
   compareButton:{backgroundColor:colors.accent,borderRadius:radius.md,minHeight:46,alignItems:"center",justifyContent:"center",padding:spacing.md},disabled:{opacity:.5},
   compareRow:{flexDirection:"row",alignItems:"center",justifyContent:"space-between",backgroundColor:colors.panel,borderRadius:radius.md,padding:spacing.md,gap:8},
   compareCondition:{color:colors.muted,fontSize:10,flex:1},compareTemp:{color:colors.text,fontSize:16,fontWeight:"800"},
-  inlineError:{color:"#FFB4A9",fontSize:12},footer:{color:colors.muted,fontSize:10,lineHeight:16,marginTop:spacing.lg},refresh:{alignSelf:"center",padding:spacing.sm},refreshText:{color:colors.accent,fontWeight:"700"}
+  inlineError:{color:"#FFB4A9",fontSize:12},
+  featureCard:{backgroundColor:colors.panel,borderWidth:1,borderColor:colors.border,borderRadius:radius.lg,padding:spacing.md,gap:spacing.sm},
+  featureHint:{color:colors.muted,fontSize:9,letterSpacing:1,fontWeight:"800"},featureText:{color:colors.text,fontSize:13,fontWeight:"600"},
+  rainRow:{flexDirection:"row",alignItems:"center",gap:10},rainTrack:{flex:1,height:7,backgroundColor:colors.border,borderRadius:9,overflow:"hidden"},rainFill:{height:7,backgroundColor:colors.accent,borderRadius:9},rainValue:{color:colors.accent,fontSize:11,fontWeight:"800",width:36,textAlign:"right"},
+  sunRow:{flexDirection:"row",justifyContent:"space-around"},sunMetric:{alignItems:"center",gap:5},sunIcon:{fontSize:28},sunValue:{color:colors.text,fontSize:20,fontWeight:"800"},
+  calendarRow:{gap:8},calendarCard:{width:88,backgroundColor:colors.panel,borderWidth:1,borderColor:colors.border,borderRadius:radius.md,padding:spacing.sm,alignItems:"center",gap:8},calendarIcon:{fontSize:24},
+  settingRow:{flexDirection:"row",justifyContent:"space-between",alignItems:"center"},settingValue:{color:colors.accent,fontWeight:"900",fontSize:12},alertLine:{borderTopWidth:1,borderTopColor:colors.border,paddingTop:spacing.sm,gap:4},
+  unitRow:{flexDirection:"row",gap:8},unitButton:{flex:1,borderWidth:1,borderColor:colors.border,borderRadius:radius.md,padding:spacing.sm,alignItems:"center"},unitActive:{backgroundColor:colors.accent,borderColor:colors.accent},unitText:{color:colors.text,fontSize:12,fontWeight:"700"},unitTextActive:{color:colors.background},travelResult:{borderTopWidth:1,borderTopColor:colors.border,paddingTop:spacing.md,gap:6},
+  footer:{color:colors.muted,fontSize:10,lineHeight:16,marginTop:spacing.lg},refresh:{alignSelf:"center",padding:spacing.sm},refreshText:{color:colors.accent,fontWeight:"700"}
 });
