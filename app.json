@@ -6,6 +6,11 @@
     "orientation": "portrait",
     "userInterfaceStyle": "dark",
     "android": { "package": "com.skycast.weatherpodcast" },
-    "ios": { "bundleIdentifier": "com.skycast.weatherpodcast" }
+    "ios": { "bundleIdentifier": "com.skycast.weatherpodcast" },
+    "extra": {
+      "eas": {
+        "projectId": "ea4d91c5-f184-4b83-a345-ddad0db1f77e"
+      }
+    }
   }
 }
