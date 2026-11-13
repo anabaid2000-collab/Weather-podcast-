@@ -20,3 +20,7 @@ jobs:
         run: npm install
       - name: Check Expo app metadata
         run: node -e "const app=require('./app.json'); if (!app.expo || !app.expo.name) process.exit(1); console.log(app.expo.name + ' metadata OK')"
+      - name: Check Expo dependencies and configuration
+        run: npx expo-doctor
+      - name: Bundle Android JavaScript
+        run: npx expo export --platform android
