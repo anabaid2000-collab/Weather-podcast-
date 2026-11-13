@@ -1,6 +1,9 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, Linking, Pressable, ScrollView, StatusBar, StyleSheet, Text, TextInput, View } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { auth, db } from "./src/firebase";
+import { doc, getDoc, serverTimestamp, setDoc } from "firebase/firestore";
+import { signInAnonymously } from "firebase/auth";
 import { colors, spacing, radius } from "./src/theme";
 
 const FAVORITES_KEY = "skycast.favoriteCities.v1";
@@ -51,6 +54,7 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [favorites, setFavorites] = useState([]);
+  const [firebaseUserId, setFirebaseUserId] = useState(null);
   const [compare, setCompare] = useState([]);
   const [comparing, setComparing] = useState(false);
   const latestWeatherRequest = useRef(0);
@@ -74,13 +78,34 @@ export default function App() {
 
   useEffect(() => {
     let active = true;
-    AsyncStorage.getItem(FAVORITES_KEY).then((raw) => {
-      if (!active || !raw) return;
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed)) {
-        setFavorites([...new Set(parsed.filter((item) => typeof item === "string" && item.trim()))].slice(0, 6));
+    const cleanCities = (value) => Array.isArray(value)
+      ? [...new Set(value.filter((item) => typeof item === "string" && item.trim()).map((item) => item.trim()))].slice(-6)
+      : [];
+    const initializeAccount = async () => {
+      let localCities = [];
+      try {
+        const raw = await AsyncStorage.getItem(FAVORITES_KEY);
+        localCities = cleanCities(raw ? JSON.parse(raw) : []);
+        if (active) setFavorites(localCities);
+      } catch {}
+      try {
+        const credential = await signInAnonymously(auth);
+        const userId = credential.user.uid;
+        const userRef = doc(db, "users", userId);
+        const snapshot = await getDoc(userRef);
+        const remoteCities = snapshot.exists() ? cleanCities(snapshot.data().favoriteCities) : [];
+        const mergedCities = cleanCities([...remoteCities, ...localCities]);
+        await setDoc(userRef, { favoriteCities: mergedCities, updatedAt: serverTimestamp() }, { merge: true });
+        if (active) {
+          setFirebaseUserId(userId);
+          setFavorites(mergedCities);
+          await AsyncStorage.setItem(FAVORITES_KEY, JSON.stringify(mergedCities));
+        }
+      } catch {
+        // Weather and locally saved cities continue to work if Firebase is temporarily unavailable.
       }
-    }).catch(() => {});
+    };
+    void initializeAccount();
     loadCity("Chattogram");
     return () => {
       active = false;
@@ -91,6 +116,16 @@ export default function App() {
   const saveFavorites = async (next) => {
     setFavorites(next);
     try { await AsyncStorage.setItem(FAVORITES_KEY, JSON.stringify(next)); } catch {}
+    if (firebaseUserId) {
+      try {
+        await setDoc(doc(db, "users", firebaseUserId), {
+          favoriteCities: next,
+          updatedAt: serverTimestamp()
+        }, { merge: true });
+      } catch {
+        // Keep the local copy; it will be merged with Firestore on the next successful sign-in.
+      }
+    }
   };
   const isFavorite = !!place && favorites.some((item) => item.toLowerCase() === place.name.toLowerCase());
   const toggleFavorite = () => {
