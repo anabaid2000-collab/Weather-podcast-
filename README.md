@@ -1,17 +1,15 @@
-# SkyCast — Weather Podcast
+# SkyCast — Weather Companion
 
-Expo / React Native weather dashboard with free on-device spoken weather briefings.
+A free Expo / React Native weather companion with written weather briefings and no speech or audio features.
 
-## Project requirements
+## Requirements
 
 - Node.js 22 or newer
 - Expo SDK 58
 - React 19.3
 - React Native 0.88
 
-## Run the app
-
-From the repository root:
+## Run locally
 
 ```bash
 npm install
@@ -19,37 +17,28 @@ npx expo-doctor
 npx expo start --tunnel ngrok
 ```
 
-Open the generated URL in Expo Go. If the tunnel does not connect, try a fresh terminal session and a different available port. Firebase CLI login and a paid Firebase plan are not required to run the weather dashboard or play spoken briefings.
+Open the generated URL in Expo Go.
 
-## Included features
+## Features
 
-- Open-Meteo city search, current conditions, and five-day forecast
-- Chattogram as the initial city
-- Maya / Noah narrator choices (different pitch settings)
-- On-device speech playback through `expo-speech`
-- Optional per-user Firestore podcast history when Firebase anonymous authentication is available
+- Open-Meteo city search and live conditions
+- Seven-day forecast with daily high/low and precipitation chance
+- Twelve-hour temperature and rain-probability outlook
+- Written daily weather briefing with practical context
+- Air-quality snapshot (US AQI, PM2.5 and PM10) where data is available
+- UV index, sunrise and sunset
+- Rain heads-up when forecast precipitation probability is high
+- Favourite cities stored locally on the device
+- Current-temperature comparison for saved cities
+- OpenStreetMap link for the selected city
+- Dark, mobile-first interface
 
-## Free voice playback
+## No audio or speech
 
-The podcast is spoken by the text-to-speech voices installed on the user's phone. The app does not call Google Cloud Text-to-Speech or a Firebase Cloud Function to play the briefing. Voice availability and sound quality depend on the device's speech engine and installed language packs.
+SkyCast intentionally contains no audio player, text-to-speech, speech synthesis, narrator controls, audio recording, or audio-generation backend. The app does not require Firebase, Cloud Functions, a speech engine, API keys, or paid billing for its current features.
 
-No Firebase Blaze upgrade, Google Cloud billing, API key, or service-account key is needed for this local voice feature. The weather forecast still needs an internet connection because it is fetched from Open-Meteo.
+## Data and privacy
 
-## Firebase project configuration
+Weather and air-quality data are retrieved from Open-Meteo. Favourite city names are stored locally on the device using AsyncStorage. No account is required.
 
-The repository retains its Firebase project configuration for optional Firestore history:
-
-- Project ID: `weather-podcast-5cb7c`
-
-Firestore rules should remain restricted to authenticated users' own `users/{uid}` documents and subcollections. Do not use public read/write rules. If Firebase history is unavailable, spoken playback should still work.
-
-## Cloud Functions
-
-The `functions/` directory contains the earlier optional Google Cloud Text-to-Speech backend. It is not used by the current free on-device playback flow and does not need to be deployed. Do not enable billing just for the current voice feature.
-
-## Troubleshooting
-
-- **No voice:** check the phone's text-to-speech settings and make sure an English voice is installed.
-- **Voice sounds different on another phone:** available voices are supplied by the device, so quality and voice choices can vary.
-- **Forecast unavailable:** check the internet connection and retry the city search.
-- **Firebase history unavailable:** voice playback can still work; check anonymous authentication and the user's Firestore rules if history is needed.
+Forecasts and environmental readings are estimates, may be delayed, and can be unavailable for some locations. They should not be used as emergency alerts.
