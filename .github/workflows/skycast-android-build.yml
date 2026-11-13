@@ -1,0 +1,30 @@
+name: SkyCast Android APK build
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: skycast-android-apk
+  cancel-in-progress: false
+
+jobs:
+  build-android:
+    name: Build Android preview APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Check out SkyCast
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Build Android APK with Expo EAS
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: npx --yes eas-cli@27.4.1 build --platform android --profile preview --non-interactive
