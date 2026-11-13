@@ -24,6 +24,9 @@ jobs:
         with:
           node-version: 22
 
+      - name: Generate npm lockfile for EAS
+        run: npm install --package-lock-only --ignore-scripts
+
       - name: Build Android APK with Expo EAS
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
