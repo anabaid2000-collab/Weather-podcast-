@@ -1,21 +1,16 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
-import { useAudioPlayer } from "expo-audio";
-import { File, Paths } from "expo-file-system";
+import * as Speech from "expo-speech";
 import { addDoc, collection, serverTimestamp } from "firebase/firestore";
-import { getFunctions, httpsCallable } from "firebase/functions";
 import { signInAnonymously } from "firebase/auth";
-import { auth, db, firebaseApp } from "./firebase";
+import { auth, db } from "./firebase";
 import { colors, spacing, radius } from "./theme";
 
 export default function PodcastPanel({ current, place }) {
   const [narrator, setNarrator] = useState("Maya");
   const [busy, setBusy] = useState(false);
-  const [message, setMessage] = useState("");
-  const [script, setScript] = useState("");
-  const [audioUri, setAudioUri] = useState(null);
   const [playing, setPlaying] = useState(false);
-  const player = useAudioPlayer(audioUri);
+  const [message, setMessage] = useState("");
 
   const podcastText = useMemo(() => {
     if (!current || !place) return "";
@@ -38,78 +33,83 @@ export default function PodcastPanel({ current, place }) {
       place.name + ". Have a good day, and thanks for listening.";
   }, [current, place]);
 
+  async function saveHistory() {
+    try {
+      if (!auth.currentUser) await signInAnonymously(auth);
+      await addDoc(collection(db, "users", auth.currentUser.uid, "podcasts"), {
+        city: place.name, narrator, script: podcastText, createdAt: serverTimestamp()
+      });
+    } catch {
+      // Speech works even if optional cloud history saving is unavailable.
+    }
+  }
+
   async function generate() {
     if (!podcastText) {
       setMessage("Load a city forecast first, then create your briefing.");
       return;
     }
-    setBusy(true); setMessage(""); setAudioUri(null); setScript("");
+    setBusy(true);
+    setMessage("");
     try {
-      if (!auth.currentUser) await signInAnonymously(auth);
-      const functions = getFunctions(firebaseApp, "us-central1");
-      const makeAudio = httpsCallable(functions, "generatePodcast");
-      const result = await makeAudio({ text: podcastText, narrator });
-      const audioBase64 = result.data?.audioBase64;
-      if (!audioBase64) throw new Error("The audio service returned an empty recording.");
-      const file = new File(Paths.cache, "skycast-briefing-" + Date.now() + ".mp3");
-      file.create({ intermediates: true, overwrite: true });
-      await file.write(audioBase64, { encoding: "base64" });
-      setAudioUri(file.uri);
-      setScript(podcastText);
-      try {
-        await addDoc(collection(db, "users", auth.currentUser.uid, "podcasts"), {
-          city: place.name, narrator, script: podcastText, createdAt: serverTimestamp()
-        });
-      } catch (saveError) {
-        // Audio generation should still succeed if history saving is temporarily unavailable.
-      }
-      setMessage("Your SkyCast audio briefing is ready.");
+      await Speech.stop();
+      setPlaying(false);
+      Speech.speak(podcastText, {
+        language: "en-US",
+        rate: 0.94,
+        pitch: narrator === "Maya" ? 1.08 : 0.92,
+        onStart: () => {
+          setBusy(false);
+          setPlaying(true);
+          setMessage(narrator + " is reading your SkyCast briefing.");
+        },
+        onDone: () => {
+          setPlaying(false);
+          setMessage("Your SkyCast briefing is complete.");
+        },
+        onStopped: () => setPlaying(false),
+        onError: () => {
+          setBusy(false);
+          setPlaying(false);
+          setMessage("Your phone's text-to-speech engine could not read this briefing. Check its speech settings and try again.");
+        }
+      });
+      void saveHistory();
     } catch (error) {
-      const code = error?.code || "";
-      if (code.includes("unauthenticated")) setMessage("Please reload the app and try again.");
-      else if (code.includes("functions/not-found") || code.includes("not-found")) setMessage("The audio function is not deployed yet. Follow the Firebase setup steps in the project README.");
-      else setMessage(error?.message || "Could not generate audio. Please try again.");
-    } finally {
       setBusy(false);
+      setPlaying(false);
+      setMessage(error?.message || "Could not start the spoken briefing. Please try again.");
     }
   }
 
-  async function togglePlayback() {
-    if (!audioUri) return;
-    try {
-      if (playing) { player.pause(); setPlaying(false); }
-      else { player.play(); setPlaying(true); }
-    } catch {
-      setMessage("Audio playback could not start. Please generate the briefing again.");
-    }
+  async function stop() {
+    await Speech.stop();
+    setBusy(false);
+    setPlaying(false);
+    setMessage("Briefing stopped.");
   }
-
-  useEffect(() => {
-    return () => { try { player.pause(); } catch {} };
-  }, [player]);
 
   return <View style={styles.card}>
     <View style={styles.headingRow}>
       <View><Text style={styles.kicker}>SKYCAST AUDIO</Text><Text style={styles.title}>Your weather podcast</Text></View>
       <Text style={styles.mic}>♫</Text>
     </View>
-    <Text style={styles.description}>Turn the latest local forecast into a spoken daily briefing.</Text>
+    <Text style={styles.description}>Turn the latest local forecast into a spoken daily briefing. Runs on your phone without cloud voice billing.</Text>
     <Text style={styles.label}>CHOOSE YOUR NARRATOR</Text>
     <View style={styles.voiceRow}>
       {["Maya", "Noah"].map((name) => <Pressable key={name} onPress={() => setNarrator(name)} style={[styles.voice, narrator === name && styles.voiceSelected]}>
         <Text style={[styles.voiceText, narrator === name && styles.voiceTextSelected]}>{name}</Text>
-        <Text style={styles.voiceSub}>{name === "Maya" ? "Warm voice" : "Calm voice"}</Text>
+        <Text style={styles.voiceSub}>{name === "Maya" ? "Higher pitch" : "Lower pitch"}</Text>
       </Pressable>)}
     </View>
-    <Pressable accessibilityRole="button" disabled={busy || !current} onPress={generate} style={({pressed}) => [styles.generate, (busy || !current) && styles.disabled, pressed && styles.pressed]}>
-      {busy ? <ActivityIndicator color={colors.background}/> : <Text style={styles.generateText}>✦  Generate AI audio</Text>}
+    <Pressable accessibilityRole="button" disabled={busy || playing || !current} onPress={generate} style={({pressed}) => [styles.generate, (busy || playing || !current) && styles.disabled, pressed && styles.pressed]}>
+      {busy ? <ActivityIndicator color={colors.background}/> : <Text style={styles.generateText}>✦  Play weather podcast</Text>}
     </Pressable>
-    {audioUri ? <Pressable accessibilityRole="button" onPress={togglePlayback} style={styles.play}>
-      <Text style={styles.playText}>{playing ? "Ⅱ  Pause briefing" : "▶  Play briefing"}</Text>
+    {playing ? <Pressable accessibilityRole="button" onPress={stop} style={styles.play}>
+      <Text style={styles.playText}>■  Stop briefing</Text>
     </Pressable> : null}
     {message ? <Text accessibilityLiveRegion="polite" style={styles.message}>{message}</Text> : null}
-    {script ? <Text style={styles.scriptPreview} numberOfLines={4}>{script}</Text> : null}
-    <Text style={styles.footnote}>AI voice by Google Cloud Text-to-Speech. Audio is generated only when you tap the button.</Text>
+    <Text style={styles.footnote}>Uses your device's built-in speech engine. Voice choices and sound quality depend on the voices installed on your phone. Internet is not needed for speech playback after the forecast loads.</Text>
   </View>;
 }
 
@@ -125,5 +125,5 @@ const styles = StyleSheet.create({
   generateText:{color:colors.background,fontSize:14,fontWeight:"900"},disabled:{opacity:.55},pressed:{opacity:.75},
   play:{minHeight:44,borderRadius:radius.md,borderWidth:1,borderColor:colors.accent,alignItems:"center",justifyContent:"center"},
   playText:{color:colors.accent,fontWeight:"800"},message:{color:colors.text,fontSize:12,lineHeight:18},
-  scriptPreview:{color:colors.muted,fontSize:11,lineHeight:17},footnote:{color:colors.muted,fontSize:10,lineHeight:15}
+  footnote:{color:colors.muted,fontSize:10,lineHeight:15}
 });
