@@ -15,6 +15,7 @@ const weatherCodes = {
 const describe = (code) => weatherCodes[code] || ["Changing conditions","🌡️"];
 const dayLabel = (date, index) => index === 0 ? "Today" : new Date(date + "T12:00:00").toLocaleDateString(undefined,{weekday:"short"});
 const number = (value, suffix="") => Number.isFinite(value) ? Math.round(value) + suffix : "—";
+const clockLabel = (value) => value?.split("T")?.[1]?.slice(0,5) || "—";
 
 async function getCity(name) {
   const response = await fetch("https://geocoding-api.open-meteo.com/v1/search?name=" + encodeURIComponent(name) + "&count=1&language=en&format=json");
@@ -25,7 +26,7 @@ async function getCity(name) {
 }
 async function getWeather(city) {
   const base = "https://api.open-meteo.com/v1/forecast?latitude=" + city.latitude + "&longitude=" + city.longitude;
-  const forecastUrl = base + "&current=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,weather_code,wind_speed_10m&hourly=temperature_2m,precipitation_probability,uv_index&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,uv_index_max,sunrise,sunset&timezone=auto&forecast_days=7";
+  const forecastUrl = base + "&current=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,weather_code,wind_speed_10m&hourly=temperature_2m,precipitation_probability,uv_index,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,uv_index_max,sunrise,sunset&timezone=auto&forecast_days=7";
   const [forecastResponse, airResponse] = await Promise.all([
     fetch(forecastUrl),
     fetch("https://air-quality-api.open-meteo.com/v1/air-quality?latitude=" + city.latitude + "&longitude=" + city.longitude + "&hourly=us_aqi,pm2_5,pm10&timezone=auto&forecast_days=1").catch(() => null)
@@ -79,7 +80,7 @@ export default function App() {
   const isFavorite = !!place && favorites.some((item) => item.toLowerCase() === place.name.toLowerCase());
   const toggleFavorite = () => {
     if (!place) return;
-    const next = isFavorite ? favorites.filter((item) => item.toLowerCase() !== place.name.toLowerCase()) : [...favorites, place.name].slice(-8);
+    const next = isFavorite ? favorites.filter((item) => item.toLowerCase() !== place.name.toLowerCase()) : [...favorites, place.name].slice(-6);
     void saveFavorites(next);
   };
 
@@ -102,6 +103,8 @@ export default function App() {
   const current = data?.forecast?.current;
   const daily = data?.forecast?.daily;
   const hourly = data?.forecast?.hourly;
+  const foundHourIndex = hourly?.time?.findIndex((time) => time >= current?.time) ?? 0;
+  const hourlyStart = Math.max(0, foundHourIndex);
   const condition = current ? describe(current.weather_code) : null;
   const briefing = useMemo(() => {
     if (!current || !daily || !place) return "";
@@ -166,6 +169,7 @@ export default function App() {
           <View style={styles.environment}>
             <Metric label="US AIR QUALITY" value={Number.isFinite(aqi) ? Math.round(aqi) + " · " + aqiLabel : "Unavailable"}/>
             <Metric label="PM2.5" value={number(data?.air?.pm25," µg/m³")}/>
+            <Metric label="PM10" value={number(data?.air?.pm10," µg/m³")}/>
             <Metric label="UV MAX" value={number(daily.uv_index_max?.[0])}/>
           </View>
           <Text style={styles.timestamp}>Air-quality readings are estimates and may be unavailable for some locations.</Text>
@@ -176,11 +180,11 @@ export default function App() {
         <View style={styles.section}>
           <View style={styles.sectionTop}><Text style={styles.sectionTitle}>Next 12 hours</Text><Text style={styles.eyebrow}>HOURLY</Text></View>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.hourly}>
-            {hourly?.time?.slice(0,12).map((time,i) => <View key={time} style={styles.hourCard}>
-              <Text style={styles.hourTime}>{new Date(time).toLocaleTimeString(undefined,{hour:"numeric"})}</Text>
-              <Text style={styles.hourIcon}>{describe(daily.weather_code[0])[1]}</Text>
-              <Text style={styles.hourTemp}>{number(hourly.temperature_2m[i],"°")}</Text>
-              <Text style={styles.hourRain}>☂ {number(hourly.precipitation_probability[i],"%")}</Text>
+            {hourly?.time?.slice(hourlyStart,hourlyStart+12).map((time,i) => <View key={time} style={styles.hourCard}>
+              <Text style={styles.hourTime}>{clockLabel(time)}</Text>
+              <Text style={styles.hourIcon}>{describe(hourly.weather_code?.[i+hourlyStart] ?? daily.weather_code[0])[1]}</Text>
+              <Text style={styles.hourTemp}>{number(hourly.temperature_2m[i+hourlyStart],"°")}</Text>
+              <Text style={styles.hourRain}>☂ {number(hourly.precipitation_probability[i+hourlyStart],"%")}</Text>
             </View>)}
           </ScrollView>
         </View>
@@ -194,7 +198,7 @@ export default function App() {
               <Text style={styles.rainChance}>☂ {number(daily.precipitation_probability_max[i],"%")}</Text>
             </View>; })}
           </View>
-          <Text style={styles.timestamp}>Sunrise {daily.sunrise?.[0] ? new Date(daily.sunrise[0]).toLocaleTimeString(undefined,{hour:"numeric",minute:"2-digit"}) : "—"} · Sunset {daily.sunset?.[0] ? new Date(daily.sunset[0]).toLocaleTimeString(undefined,{hour:"numeric",minute:"2-digit"}) : "—"}</Text>
+          <Text style={styles.timestamp}>Sunrise {daily.sunrise?.[0] ? clockLabel(daily.sunrise[0]) : "—"} · Sunset {daily.sunset?.[0] ? clockLabel(daily.sunset[0]) : "—"}</Text>
         </View>
       </> : null}
 
