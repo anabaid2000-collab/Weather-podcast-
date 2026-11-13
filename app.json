@@ -1,23 +1,11 @@
 {
   "expo": {
     "name": "SkyCast",
-    "slug": "skycast-weather-podcast",
-    "version": "1.1.0",
+    "slug": "skycast-weather-companion",
+    "version": "1.2.0",
     "orientation": "portrait",
     "userInterfaceStyle": "dark",
-    "android": {
-      "package": "com.skycast.weatherpodcast"
-    },
-    "ios": {
-      "bundleIdentifier": "com.skycast.weatherpodcast"
-    },
-    "plugins": [
-      [
-        "expo-audio",
-        {
-          "enableBackgroundPlayback": true
-        }
-      ]
-    ]
+    "android": { "package": "com.skycast.weatherpodcast" },
+    "ios": { "bundleIdentifier": "com.skycast.weatherpodcast" }
   }
 }
