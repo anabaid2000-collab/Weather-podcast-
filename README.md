@@ -1,94 +1,50 @@
 # SkyCast — Weather Podcast
 
-Expo / React Native weather dashboard with a callable Firebase audio-generation backend.
+Expo / React Native starter connected to Firebase Authentication and Cloud Firestore.
 
-## Project requirements
+## Runtime requirements
 
-- Node.js 22 or newer
+- Node.js 22.13 or newer
 - Expo SDK 58
 - React 19.3
 - React Native 0.88
 
-## Run the app
+## Run locally
 
-From the repository root:
+1. Install Node.js 22.13 or newer.
+2. Run `npm install`.
+3. Run `npx expo-doctor` to check the project.
+4. Run `npx expo start --tunnel`.
+5. Open the project with the matching Expo Go SDK or a development build.
 
-```bash
-npm install
-npx expo-doctor
-npx expo start --tunnel ngrok
-```
+## Included
 
-Open the generated URL in Expo Go. If the tunnel does not connect, try a fresh terminal session and a different available port. The Firebase CLI login is not required just to run the weather dashboard.
+- Anonymous Firebase sign-in
+- Per-user Firestore preferences at `users/{uid}`
+- Language, narrator, and daily-reminder preference controls
+- Firebase client configuration in `src/firebase.js`
 
-## Included features
+## Firebase setup
 
-- Open-Meteo city search, current conditions, and five-day forecast
-- Chattogram as the initial city
-- Firebase anonymous authentication
-- Per-user Firestore podcast history
-- Maya / Noah narrator selection
-- Callable Cloud Function named `generatePodcast`
-- Google Cloud Text-to-Speech Neural2 audio generation
-- Local MP3 caching and playback through `expo-audio`
+- Enable Anonymous sign-in in Firebase Authentication.
+- Create a Cloud Firestore database.
+- Publish rules that allow an authenticated user to read/write only `users/{their uid}`.
 
-The app's weather dashboard does not depend on Firebase. Podcast generation does.
+The current screen is a Firebase connection test. Weather data, forecast UI, real audio playback, and scheduled notifications are not implemented in this test build.
 
-## Firebase project configuration
+Never add service-account keys or private credentials to this repository.
 
-The repository is configured to use the existing Firebase project:
 
-- Project ID: `weather-podcast-5cb7c`
-- Cloud Functions region: `us-central1`
-- Callable function: `generatePodcast`
+## AI weather podcast setup
 
-The `.firebaserc` file sets this project as the default, so Firebase CLI commands should be run from the repository root (the folder containing `firebase.json`).
+The app now includes a podcast player that turns the loaded weather conditions into a spoken English briefing. Audio is synthesized by Google Cloud Text-to-Speech using Neural2 voices (Maya and Noah).
 
-To verify the selected project after Firebase CLI authentication:
+Before the audio button can work in a deployed app:
 
-```bash
-npx firebase-tools projects:list
-npx firebase-tools use
-```
+1. In Google Cloud Console for Firebase project `weather-podcast-5cb7c`, enable the **Cloud Text-to-Speech API**.
+2. Firebase Cloud Functions deployments require the Firebase **Blaze** billing plan. Review the current Firebase and Google Cloud pricing first, and configure budget alerts before enabling billing.
+3. From the repository root, run `npm install` and `npm install --prefix functions`.
+4. Deploy only the callable audio function with `npx firebase-tools deploy --only functions:generatePodcast` (or install/use the Firebase CLI and run `firebase deploy --only functions:generatePodcast`).
+5. Reload the app. Sign-in is anonymous; the callable function rejects unauthenticated requests. The Google Cloud service account is used server-side; no API key is stored in the mobile app.
 
-If the active project is not `weather-podcast-5cb7c`, run:
-
-```bash
-npx firebase-tools use default
-```
-
-## Enable AI audio (backend setup)
-
-The AI voice feature cannot generate audio until the backend prerequisites are completed:
-
-1. Enable **Cloud Text-to-Speech API** in Google Cloud Console for project `weather-podcast-5cb7c`.
-2. Firebase Cloud Functions deployment requires the Blaze billing plan and may incur charges. A parent or guardian should review the current pricing, enable billing only if approved, and configure budget alerts.
-3. Ensure the Cloud Functions runtime service account has permission to use Cloud Text-to-Speech (the `Cloud Text-to-Speech User` role).
-4. From the repository root, install backend dependencies:
-
-   ```bash
-   npm install --prefix functions
-   ```
-
-5. After an authorized Firebase account is logged in and billing/API permissions are ready, deploy only the audio function:
-
-   ```bash
-   npx firebase-tools deploy --only functions:generatePodcast
-   ```
-
-6. Reload SkyCast and tap **Generate AI audio**.
-
-The function uses its server-side Google Cloud identity. Never put service-account JSON, private keys, or access tokens in the app or GitHub repository. The client Firebase configuration in `src/firebase.js` is not a service-account key.
-
-## Firestore security
-
-Keep Firestore rules restricted to authenticated users' own `users/{uid}` documents and subcollections. Do not use public read/write rules.
-
-## Troubleshooting
-
-- **Firebase CLI says no active project:** check that the terminal is in the repository root and that `.firebaserc` and `firebase.json` are present.
-- **Function not found:** `generatePodcast` has not been deployed to the configured project yet.
-- **Permission denied / Text-to-Speech error:** check that the API is enabled and the function runtime service account has the required role.
-- **No audio in the app:** check the message shown below the Generate AI audio button and confirm the callable function is deployed.
-
-The first version creates an English weather briefing. Additional languages and longer-form AI-written scripts are future enhancements.
+Audio is generated only after the user taps **Generate AI audio**. The current first version creates an English briefing; additional languages and longer-form AI-written podcast scripts are future enhancements.
