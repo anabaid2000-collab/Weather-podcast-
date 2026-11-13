@@ -176,17 +176,7 @@ export default function App() {
     finally { setTravelLoading(false); }
   };
 
-  const smartAlerts = useMemo(() => {
-    if (!current || !daily) return [];
-    const alerts = [];
-    const rain = daily.precipitation_probability_max?.[0] ?? 0;
-    const uv = daily.uv_index_max?.[0] ?? 0;
-    if (rain >= 60) alerts.push({ icon: "☂️", title: "Rain likely", detail: rain + "% chance today. Consider carrying an umbrella." });
-    if (uv >= 8) alerts.push({ icon: "☀️", title: "Very high UV", detail: "Plan shade and sun protection around midday." });
-    if (Number.isFinite(data?.air?.aqi) && data.air.aqi > 100) alerts.push({ icon: "🌫️", title: "Air quality alert", detail: "Air quality may affect sensitive groups. Check local conditions before extended outdoor activity." });
-    if (current.wind_speed_10m >= 40) alerts.push({ icon: "💨", title: "Strong wind", detail: "Wind speeds are elevated. Take care outdoors." });
-    return alerts;
-  }, [current, daily, data?.air?.aqi]);
+
 
   const isFavorite = !!place && favorites.some((item) => item.toLowerCase() === place.name.toLowerCase());
   const toggleFavorite = () => {
@@ -228,6 +218,18 @@ export default function App() {
 
   const aqi = data?.air?.aqi;
   const aqiLabel = !Number.isFinite(aqi) ? "Unavailable" : aqi <= 50 ? "Good" : aqi <= 100 ? "Moderate" : aqi <= 150 ? "Sensitive groups" : aqi <= 200 ? "Unhealthy" : aqi <= 300 ? "Very unhealthy" : "Hazardous";
+
+  const smartAlerts = useMemo(() => {
+    if (!current || !daily) return [];
+    const alerts = [];
+    const rain = daily.precipitation_probability_max?.[0] ?? 0;
+    const uv = daily.uv_index_max?.[0] ?? 0;
+    if (rain >= 60) alerts.push({ icon: "☂️", title: "Rain likely", detail: rain + "% chance today. Consider carrying an umbrella." });
+    if (uv >= 8) alerts.push({ icon: "☀️", title: "Very high UV", detail: "Plan shade and sun protection around midday." });
+    if (Number.isFinite(data?.air?.aqi) && data.air.aqi > 100) alerts.push({ icon: "🌫️", title: "Air quality alert", detail: "Air quality may affect sensitive groups. Check local conditions before extended outdoor activity." });
+    if (current.wind_speed_10m >= 40) alerts.push({ icon: "💨", title: "Strong wind", detail: "Wind speeds are elevated. Take care outdoors." });
+    return alerts;
+  }, [current, daily, data?.air?.aqi]);
 
   return <View style={styles.screen}>
     <StatusBar barStyle="light-content" backgroundColor={colors.background}/>
