@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, Linking, Pressable, ScrollView, StatusBar, StyleSheet, Text, TextInput, View } from "react-native";
+import Animated, { cancelAnimation, useAnimatedStyle, useReducedMotion, useSharedValue, withRepeat, withTiming } from "react-native-reanimated";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { auth, db } from "./src/firebase";
 import { doc, getDoc, serverTimestamp, setDoc } from "firebase/firestore";
@@ -277,7 +278,7 @@ export default function App() {
           <View style={styles.top}>
             <View style={{flex:1}}><Text style={styles.place}>{place?.name}{place?.admin1 ? ", " + place.admin1 : ""}</Text><Text style={styles.muted}>{place?.country}</Text></View>
             <Pressable accessibilityRole="button" accessibilityLabel={isFavorite ? "Remove saved city" : "Save city"} onPress={toggleFavorite} style={styles.favorite}><Text style={styles.favoriteText}>{isFavorite ? "★ Saved" : "☆ Save city"}</Text></Pressable>
-            <Text style={styles.heroIcon}>{condition[1]}</Text>
+            <WeatherMotion><Text style={styles.heroIcon}>{condition[1]}</Text></WeatherMotion>
           </View>
           <Text style={styles.temperature}>{temp(current.temperature_2m)}</Text>
           <Text style={styles.condition}>{condition[0]}</Text>
@@ -490,6 +491,23 @@ export default function App() {
   </View>;
 }
 
+function WeatherMotion({children}) {
+  const reducedMotion = useReducedMotion();
+  const drift = useSharedValue(0);
+  useEffect(() => {
+    if (reducedMotion) {
+      drift.set(0);
+      return;
+    }
+    drift.set(withRepeat(withTiming(-7, { duration: 2400 }), -1, true));
+    return () => cancelAnimation(drift);
+  }, [reducedMotion, drift]);
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: drift.get() }]
+  }));
+  return <Animated.View style={[styles.heroIconMotion, animatedStyle]}>{children}</Animated.View>;
+}
+
 function Metric({label,value}) { return <View style={styles.metric}><Text style={styles.metricLabel}>{label}</Text><Text style={styles.metricValue}>{value}</Text></View>; }
 
 const styles = StyleSheet.create({
@@ -499,11 +517,11 @@ const styles = StyleSheet.create({
   pageNavButtonActive:{backgroundColor:colors.accent,borderColor:colors.accent},
   pageNavText:{color:colors.text,fontSize:12,fontWeight:"800"},
   pageNavTextActive:{color:colors.background},
-  pageHeading:{color:colors.text,fontSize:24,fontWeight:"900",marginTop:spacing.sm,marginBottom:spacing.xs},
+  pageHeading:{color:colors.text,fontSize:25,fontWeight:"900",letterSpacing:-0.5,marginTop:spacing.sm,marginBottom:spacing.xs},
   toolButton:{backgroundColor:colors.panel,borderWidth:1,borderColor:colors.border,borderRadius:radius.lg,padding:spacing.lg,gap:6},
   toolButtonTitle:{color:colors.text,fontSize:15,fontWeight:"800"},
   toolButtonHint:{color:colors.muted,fontSize:11,lineHeight:16},
-  top:{flexDirection:"row",justifyContent:"space-between",alignItems:"center",gap:8},brand:{color:colors.text,fontSize:22,fontWeight:"900",letterSpacing:4},
+  top:{flexDirection:"row",justifyContent:"space-between",alignItems:"center",gap:8},brand:{color:colors.text,fontSize:23,fontWeight:"900",letterSpacing:4},
   eyebrow:{color:colors.muted,fontSize:9,letterSpacing:1.5,marginTop:4},live:{color:colors.accent,fontSize:9,fontWeight:"800",letterSpacing:1},
   heading:{color:colors.text,fontSize:28,fontWeight:"800",marginTop:spacing.lg},subheading:{color:colors.muted,fontSize:14,marginTop:-8},
   searchRow:{flexDirection:"row",gap:spacing.sm,marginTop:spacing.sm},input:{flex:1,minHeight:48,borderRadius:radius.md,paddingHorizontal:spacing.md,color:colors.text,backgroundColor:colors.panel,borderWidth:1,borderColor:colors.border,fontSize:15},
@@ -511,9 +529,9 @@ const styles = StyleSheet.create({
   state:{minHeight:180,backgroundColor:colors.panel,borderRadius:radius.lg,justifyContent:"center",alignItems:"center",padding:spacing.lg,gap:spacing.sm},
   muted:{color:colors.muted,fontSize:12,lineHeight:19},weatherIcon:{fontSize:38},cardTitle:{color:colors.text,fontSize:18,fontWeight:"800"},
   retry:{backgroundColor:colors.accent,borderRadius:radius.md,paddingHorizontal:spacing.lg,paddingVertical:spacing.sm,marginTop:spacing.sm},
-  hero:{backgroundColor:colors.panel,borderRadius:radius.lg,borderWidth:1,borderColor:colors.border,padding:spacing.lg},
+  hero:{backgroundColor:colors.panel,borderRadius:radius.lg,borderWidth:1,borderColor:"#315A78",padding:spacing.lg},
   place:{color:colors.text,fontSize:16,fontWeight:"800"},favorite:{borderWidth:1,borderColor:colors.border,borderRadius:radius.full,paddingHorizontal:10,paddingVertical:7},favoriteText:{color:colors.accent,fontSize:11,fontWeight:"800"},
-  heroIcon:{fontSize:42},temperature:{color:colors.text,fontSize:76,fontWeight:"200",letterSpacing:-4,marginTop:12},
+  heroIcon:{fontSize:46},heroIconMotion:{minWidth:58,minHeight:58,alignItems:"center",justifyContent:"center",borderRadius:radius.full,backgroundColor:"#1B3852",borderWidth:1,borderColor:"#315A78"},temperature:{color:colors.accent,fontSize:76,fontWeight:"200",letterSpacing:-4,marginTop:12},
   condition:{color:colors.text,fontSize:17,fontWeight:"700",marginTop:-4},metrics:{flexDirection:"row",borderTopWidth:1,borderTopColor:colors.border,marginTop:spacing.lg,paddingTop:spacing.md,justifyContent:"space-between",gap:8},
   metric:{gap:5,flex:1},metricLabel:{color:colors.muted,fontSize:9,letterSpacing:1,fontWeight:"800"},metricValue:{color:colors.text,fontSize:13,fontWeight:"700"},
   timestamp:{color:colors.muted,fontSize:10,marginTop:spacing.md,lineHeight:15},mapLink:{marginTop:spacing.md,alignSelf:"flex-start"},mapLinkText:{color:colors.accent,fontWeight:"800",fontSize:12},
