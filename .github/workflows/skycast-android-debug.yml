@@ -36,6 +36,24 @@ jobs:
       - name: Generate Android native project
         run: npx expo prebuild --platform android --no-install
 
+      - name: Configure Expo Updates preview channel in standalone APK
+        run: |
+          node <<'NODE'
+          const fs = require('fs');
+          const file = 'android/app/src/main/AndroidManifest.xml';
+          let xml = fs.readFileSync(file, 'utf8');
+          const applicationTag = /<application\\b[^>]*>/;
+          if (!applicationTag.test(xml)) throw new Error('Android application tag not found');
+          const metadata = '    <meta-data android:name="expo.modules.updates.EXPO_UPDATES_REQUEST_HEADERS" android:value="{&quot;expo-channel-name&quot;:&quot;preview&quot;}"/>\\n';
+          if (xml.includes('expo.modules.updates.EXPO_UPDATES_REQUEST_HEADERS')) {
+            xml = xml.replace(/\\s*<meta-data android:name="expo\\.modules\\.updates\\.EXPO_UPDATES_REQUEST_HEADERS"[^>]*\\/>/, '\\n' + metadata.trim());
+          } else {
+            xml = xml.replace(applicationTag, match => match + '\\n' + metadata);
+          }
+          fs.writeFileSync(file, xml);
+          if (!xml.includes('&quot;expo-channel-name&quot;:&quot;preview&quot;')) throw new Error('Preview channel header was not configured');
+          NODE
+
       - name: Explicitly enable JS bundling for debug
         run: |
           node <<'NODE'
