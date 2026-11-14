@@ -256,7 +256,15 @@ export default function App() {
       <Text style={styles.pageHeading}>{({home:"Your weather",story:"Weather Story",rain:"Rain & Air Quality",sun:"Sun & Sky",travel:"Travel Planner",dashboard:"Personal Dashboard",more:"More tools"})[page]}</Text>
 {page === "home" ? <>
       <Text style={styles.heading}>Your sky, right now.</Text>
-      <Text style={styles.subheading}>Clear forecasts. Better plans.</Text>
+      <Text style={styles.subheading}>A little sunshine for your day.</Text>
+      <View style={styles.welcomeSticker}>
+        <Text style={styles.welcomeEmoji}>🌈</Text>
+        <View style={{flex:1}}>
+          <Text style={styles.welcomeTitle}>Hey, sky explorer!</Text>
+          <Text style={styles.welcomeCopy}>Your forecast buddy is ready with today's outlook.</Text>
+        </View>
+        <Text style={styles.welcomeStar}>✦</Text>
+      </View>
       <View style={styles.searchRow}>
         <TextInput accessibilityLabel="Search city" value={query} onChangeText={setQuery} onSubmitEditing={() => loadCity(query)} returnKeyType="search" placeholder="Search any city" placeholderTextColor={colors.muted} style={styles.input}/>
         <Pressable accessibilityRole="button" onPress={() => loadCity(query)} style={styles.button}><Text style={styles.buttonText}>Search</Text></Pressable>
@@ -505,38 +513,58 @@ function WeatherMotion({children}) {
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ translateY: drift.get() }]
   }));
-  return <Animated.View style={[styles.heroIconMotion, animatedStyle]}>{children}</Animated.View>;
+  return <Animated.View style={[styles.heroIconMotion, animatedStyle]}>
+    <View style={styles.mascotSparkleOne}><Text style={styles.mascotSparkle}>✦</Text></View>
+    <View style={styles.mascotSparkleTwo}><Text style={styles.mascotSparkle}>✧</Text></View>
+    {children}
+    <View style={styles.mascotFace}>
+      <View style={styles.mascotEye}/>
+      <View style={styles.mascotEye}/>
+      <Text style={styles.mascotSmile}>⌣</Text>
+    </View>
+  </Animated.View>;
 }
 
 function Metric({label,value}) { return <View style={styles.metric}><Text style={styles.metricLabel}>{label}</Text><Text style={styles.metricValue}>{value}</Text></View>; }
 
 const styles = StyleSheet.create({
   screen:{flex:1,backgroundColor:colors.background},content:{padding:spacing.lg,paddingTop:spacing.xl,paddingBottom:44,gap:spacing.md},
-  pageNav:{flexDirection:"row",flexWrap:"wrap",gap:8,paddingVertical:8},
-  pageNavButton:{paddingHorizontal:14,paddingVertical:10,borderRadius:radius.full,borderWidth:1,borderColor:colors.border,backgroundColor:colors.panel},
-  pageNavButtonActive:{backgroundColor:colors.accent,borderColor:colors.accent},
+  pageNav:{flexDirection:"row",flexWrap:"wrap",gap:9,paddingVertical:10},
+  pageNavButton:{paddingHorizontal:15,paddingVertical:10,borderRadius:radius.full,borderWidth:1,borderColor:"#354267",backgroundColor:"#171F3D"},
+  pageNavButtonActive:{backgroundColor:"#A8F0E0",borderColor:"#A8F0E0"},
   pageNavText:{color:colors.text,fontSize:12,fontWeight:"800"},
   pageNavTextActive:{color:colors.background},
-  pageHeading:{color:colors.text,fontSize:25,fontWeight:"900",letterSpacing:-0.5,marginTop:spacing.sm,marginBottom:spacing.xs},
+  pageHeading:{color:colors.text,fontSize:26,fontWeight:"900",letterSpacing:-0.7,marginTop:spacing.sm,marginBottom:spacing.xs},
+  welcomeSticker:{flexDirection:"row",alignItems:"center",gap:12,backgroundColor:"#202C50",borderWidth:1,borderColor:"#40517D",borderRadius:22,padding:14,marginTop:spacing.sm},
+  welcomeEmoji:{fontSize:30},
+  welcomeTitle:{color:"#F8F6FF",fontSize:14,fontWeight:"900"},
+  welcomeCopy:{color:"#B8C3E0",fontSize:11,lineHeight:16,marginTop:3},
+  welcomeStar:{color:"#FFD98A",fontSize:23},
+  mascotSparkleOne:{position:"absolute",top:7,left:10},
+  mascotSparkleTwo:{position:"absolute",right:9,top:17},
+  mascotSparkle:{color:"#FFE39A",fontSize:17,fontWeight:"900"},
+  mascotFace:{position:"absolute",bottom:9,left:34,flexDirection:"row",alignItems:"center",gap:5,backgroundColor:"#FFF4D8",borderRadius:12,paddingHorizontal:6,paddingVertical:1},
+  mascotEye:{width:4,height:4,borderRadius:2,backgroundColor:"#394267"},
+  mascotSmile:{fontSize:10,color:"#394267",fontWeight:"900",marginTop:-3},
   toolButton:{backgroundColor:colors.panel,borderWidth:1,borderColor:colors.border,borderRadius:radius.lg,padding:spacing.lg,gap:6},
   toolButtonTitle:{color:colors.text,fontSize:15,fontWeight:"800"},
   toolButtonHint:{color:colors.muted,fontSize:11,lineHeight:16},
   top:{flexDirection:"row",justifyContent:"space-between",alignItems:"center",gap:8},brand:{color:colors.text,fontSize:23,fontWeight:"900",letterSpacing:4},
   eyebrow:{color:colors.muted,fontSize:9,letterSpacing:1.5,marginTop:4},live:{color:colors.accent,fontSize:9,fontWeight:"800",letterSpacing:1},
-  heading:{color:colors.text,fontSize:28,fontWeight:"800",marginTop:spacing.lg},subheading:{color:colors.muted,fontSize:14,marginTop:-8},
+  heading:{color:colors.text,fontSize:30,fontWeight:"900",letterSpacing:-0.8,marginTop:spacing.lg},subheading:{color:colors.muted,fontSize:14,marginTop:-8,lineHeight:21},
   searchRow:{flexDirection:"row",gap:spacing.sm,marginTop:spacing.sm},input:{flex:1,minHeight:48,borderRadius:radius.md,paddingHorizontal:spacing.md,color:colors.text,backgroundColor:colors.panel,borderWidth:1,borderColor:colors.border,fontSize:15},
   button:{backgroundColor:colors.accent,borderRadius:radius.md,justifyContent:"center",paddingHorizontal:spacing.lg},buttonText:{color:colors.background,fontWeight:"800"},
   state:{minHeight:180,backgroundColor:colors.panel,borderRadius:radius.lg,justifyContent:"center",alignItems:"center",padding:spacing.lg,gap:spacing.sm},
   muted:{color:colors.muted,fontSize:12,lineHeight:19},weatherIcon:{fontSize:38},cardTitle:{color:colors.text,fontSize:18,fontWeight:"800"},
   retry:{backgroundColor:colors.accent,borderRadius:radius.md,paddingHorizontal:spacing.lg,paddingVertical:spacing.sm,marginTop:spacing.sm},
-  hero:{backgroundColor:colors.panel,borderRadius:radius.lg,borderWidth:1,borderColor:"#315A78",padding:spacing.lg},
+  hero:{backgroundColor:"#182747",borderRadius:30,borderWidth:1,borderColor:"#394C79",padding:spacing.lg,shadowColor:"#050A18",shadowOpacity:0.24,shadowRadius:18,shadowOffset:{width:0,height:9},elevation:5},
   place:{color:colors.text,fontSize:16,fontWeight:"800"},favorite:{borderWidth:1,borderColor:colors.border,borderRadius:radius.full,paddingHorizontal:10,paddingVertical:7},favoriteText:{color:colors.accent,fontSize:11,fontWeight:"800"},
-  heroIcon:{fontSize:46},heroIconMotion:{minWidth:58,minHeight:58,alignItems:"center",justifyContent:"center",borderRadius:radius.full,backgroundColor:"#1B3852",borderWidth:1,borderColor:"#315A78"},temperature:{color:colors.accent,fontSize:76,fontWeight:"200",letterSpacing:-4,marginTop:12},
+  heroIcon:{fontSize:48},heroIconMotion:{width:94,height:94,alignItems:"center",justifyContent:"center",borderRadius:30,backgroundColor:"#26365E",borderWidth:1,borderColor:"#536394",shadowColor:"#A8F0E0",shadowOpacity:0.16,shadowRadius:14,shadowOffset:{width:0,height:5},elevation:4},temperature:{color:colors.accent,fontSize:76,fontWeight:"200",letterSpacing:-4,marginTop:12},
   condition:{color:colors.text,fontSize:17,fontWeight:"700",marginTop:-4},metrics:{flexDirection:"row",borderTopWidth:1,borderTopColor:colors.border,marginTop:spacing.lg,paddingTop:spacing.md,justifyContent:"space-between",gap:8},
   metric:{gap:5,flex:1},metricLabel:{color:colors.muted,fontSize:9,letterSpacing:1,fontWeight:"800"},metricValue:{color:colors.text,fontSize:13,fontWeight:"700"},
   timestamp:{color:colors.muted,fontSize:10,marginTop:spacing.md,lineHeight:15},mapLink:{marginTop:spacing.md,alignSelf:"flex-start"},mapLinkText:{color:colors.accent,fontWeight:"800",fontSize:12},
-  section:{gap:spacing.sm,marginTop:spacing.sm},sectionTop:{flexDirection:"row",justifyContent:"space-between",alignItems:"center"},sectionTitle:{color:colors.text,fontSize:18,fontWeight:"800"},
-  briefing:{backgroundColor:colors.panel,borderWidth:1,borderColor:colors.border,borderRadius:radius.lg,padding:spacing.lg,gap:spacing.sm},
+  section:{gap:spacing.sm,marginTop:spacing.sm},sectionTop:{flexDirection:"row",justifyContent:"space-between",alignItems:"center"},sectionTitle:{color:colors.text,fontSize:18,fontWeight:"900",letterSpacing:-0.25},
+  briefing:{backgroundColor:"#171F3D",borderWidth:1,borderColor:"#303D68",borderRadius:26,padding:spacing.lg,gap:spacing.sm},
   briefingKicker:{color:colors.accent,fontSize:9,fontWeight:"900",letterSpacing:2},briefingText:{color:colors.text,fontSize:14,lineHeight:23},briefingFooter:{color:colors.muted,fontSize:10,lineHeight:15},
   environment:{backgroundColor:colors.panel,borderWidth:1,borderColor:colors.border,borderRadius:radius.lg,padding:spacing.md,flexDirection:"row",gap:spacing.sm},
   alert:{backgroundColor:"#392D1B",borderColor:"#80612C",borderWidth:1,borderRadius:radius.md,padding:spacing.md,gap:5},alertTitle:{color:"#FFD68A",fontWeight:"900",fontSize:13},alertText:{color:"#F8E8C7",fontSize:12,lineHeight:18},
@@ -551,7 +579,7 @@ const styles = StyleSheet.create({
   compareRow:{flexDirection:"row",alignItems:"center",justifyContent:"space-between",backgroundColor:colors.panel,borderRadius:radius.md,padding:spacing.md,gap:8},
   compareCondition:{color:colors.muted,fontSize:10,flex:1},compareTemp:{color:colors.text,fontSize:16,fontWeight:"800"},
   inlineError:{color:"#FFB4A9",fontSize:12},
-  featureCard:{backgroundColor:colors.panel,borderWidth:1,borderColor:colors.border,borderRadius:radius.lg,padding:spacing.md,gap:spacing.sm},
+  featureCard:{backgroundColor:"#171F3D",borderWidth:1,borderColor:"#303D68",borderRadius:26,padding:spacing.md,gap:spacing.sm},
   featureHint:{color:colors.muted,fontSize:9,letterSpacing:1,fontWeight:"800"},featureText:{color:colors.text,fontSize:13,fontWeight:"600"},
   rainRow:{flexDirection:"row",alignItems:"center",gap:10},rainTrack:{flex:1,height:7,backgroundColor:colors.border,borderRadius:9,overflow:"hidden"},rainFill:{height:7,backgroundColor:colors.accent,borderRadius:9},rainValue:{color:colors.accent,fontSize:11,fontWeight:"800",width:36,textAlign:"right"},
   sunRow:{flexDirection:"row",justifyContent:"space-around"},sunMetric:{alignItems:"center",gap:5},sunIcon:{fontSize:28},sunValue:{color:colors.text,fontSize:20,fontWeight:"800"},
