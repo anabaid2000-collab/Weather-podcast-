@@ -1,0 +1,43 @@
+name: Publish SkyCast Android OTA update
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'App.js'
+      - 'src/**'
+      - 'assets/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: skycast-ota-preview
+  cancel-in-progress: false
+
+jobs:
+  publish-android:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out SkyCast
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Publish Android update to preview channel
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: |
+          if [ -z "$EXPO_TOKEN" ]; then
+            echo "::error::EXPO_TOKEN repository secret is missing."
+            exit 1
+          fi
+          npx --yes eas-cli@27.4.1 update --channel preview --environment preview --platform android --message "SkyCast update from GitHub commit $GITHUB_SHA" --non-interactive
