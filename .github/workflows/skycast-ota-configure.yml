@@ -1,0 +1,53 @@
+name: Configure SkyCast OTA Updates
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  configure:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Configure EAS Update
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: |
+          if [ -z "$EXPO_TOKEN" ]; then
+            echo "::error::EXPO_TOKEN repository secret is missing."
+            exit 1
+          fi
+          npx --yes eas-cli@27.4.1 whoami
+          npx --yes eas-cli@27.4.1 update:configure --platform android --non-interactive
+
+      - name: Validate Expo configuration
+        run: |
+          npx expo config --type public
+          npx expo-doctor
+
+      - name: Commit generated OTA configuration
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app.json eas.json package.json package-lock.json
+          if ! git diff --cached --quiet; then
+            git commit -m "Configure SkyCast Android OTA updates"
+            git push origin main
+          else
+            echo "No generated configuration changes to commit."
+          fi
