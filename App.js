@@ -346,8 +346,6 @@ export default function App() {
         </View>
       </> : null}
 
-</> : null}
-
 
 
 {page === "rain" ? <>
