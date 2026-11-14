@@ -1,4 +1,4 @@
-name: SkyCast Android debug APK (no EAS credentials)
+name: SkyCast standalone Android APK (no Metro, no EAS credentials)
 
 on:
   workflow_dispatch:
@@ -7,12 +7,12 @@ permissions:
   contents: read
 
 concurrency:
-  group: skycast-android-debug-apk
+  group: skycast-android-standalone-apk
   cancel-in-progress: false
 
 jobs:
-  build-android-debug:
-    name: Build installable Android debug APK
+  build-android:
+    name: Build standalone Android APK with bundled JavaScript
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
@@ -36,16 +36,42 @@ jobs:
       - name: Generate Android native project
         run: npx expo prebuild --platform android --no-install
 
-      - name: Build debug APK
+      - name: Enable JavaScript bundling for the debug variant
+        run: |
+          node <<'NODE'
+          const fs = require('fs');
+          const file = 'android/app/build.gradle';
+          let gradle = fs.readFileSync(file, 'utf8');
+          if (!/react\s*\{/.test(gradle)) {
+            throw new Error('Could not find the React Native Gradle react block');
+          }
+          if (/debuggableVariants\s*=/.test(gradle)) {
+            gradle = gradle.replace(/debuggableVariants\s*=\s*\[[^\]]*\]/, 'debuggableVariants = []');
+          } else {
+            gradle = gradle.replace(/react\s*\{/, match => match + '\n    // Bundle JS into the APK so it runs without Metro.\n    debuggableVariants = []');
+          }
+          fs.writeFileSync(file, gradle);
+          if (!/debuggableVariants\s*=\s*\[\s*\]/.test(gradle)) {
+            throw new Error('Failed to enable JS bundling for debug');
+          }
+          NODE
+
+      - name: Build standalone debug APK
         working-directory: android
         run: |
           chmod +x gradlew
           ./gradlew assembleDebug --no-daemon
 
-      - name: Upload installable APK
+      - name: Verify APK contains a JavaScript bundle
+        run: |
+          APK=android/app/build/outputs/apk/debug/app-debug.apk
+          test -s "$APK"
+          unzip -l "$APK" | grep -E 'assets/index.android.bundle|assets/index.android.bundle.hbc'
+
+      - name: Upload standalone APK
         uses: actions/upload-artifact@v4
         with:
-          name: skycast-android-debug-apk
+          name: skycast-android-standalone-apk
           path: android/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 14
