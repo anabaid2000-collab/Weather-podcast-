@@ -485,7 +485,7 @@ export default function App() {
       </View> : null}
       <Text style={styles.footer}>{offlineCopy ? "Offline mode · Showing your last saved forecast. Reconnect to refresh live data. " : ""}Weather and air-quality data by Open-Meteo. Forecasts are estimates and can change.</Text>
       <Pressable onPress={() => loadCity(place?.name || query)} style={styles.refresh}><Text style={styles.refreshText}>↻  Refresh forecast</Text></Pressable>
-      </>}
+      </> : null}
     </ScrollView>
   </View>;
 }
