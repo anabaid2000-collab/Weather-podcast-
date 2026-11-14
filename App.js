@@ -244,14 +244,14 @@ export default function App() {
         <View><Text style={styles.brand}>SKYCAST</Text><Text style={styles.eyebrow}>YOUR WEATHER COMPANION</Text></View>
         <Text style={styles.live}>● LIVE DATA</Text>
       </View>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.pageNav}>
+      <View style={styles.pageNav}>
         {[
           ["home","Home"],["story","Weather Story"],["rain","Rain & Air"],["sun","Sun & Sky"],
           ["travel","Travel"],["dashboard","Dashboard"],["more","More"]
         ].map(([key,label]) => <Pressable key={key} accessibilityRole="button" accessibilityState={{selected:page===key}} onPress={() => setPage(key)} style={[styles.pageNavButton,page===key&&styles.pageNavButtonActive]}>
           <Text style={[styles.pageNavText,page===key&&styles.pageNavTextActive]}>{label}</Text>
         </Pressable>)}
-      </ScrollView>
+      </View>
       <Text style={styles.pageHeading}>{({home:"Your weather",story:"Weather Story",rain:"Rain & Air Quality",sun:"Sun & Sky",travel:"Travel Planner",dashboard:"Personal Dashboard",more:"More tools"})[page]}</Text>
 {page === "home" ? <>
       <Text style={styles.heading}>Your sky, right now.</Text>
@@ -493,7 +493,7 @@ function Metric({label,value}) { return <View style={styles.metric}><Text style=
 
 const styles = StyleSheet.create({
   screen:{flex:1,backgroundColor:colors.background},content:{padding:spacing.lg,paddingTop:spacing.xl,paddingBottom:44,gap:spacing.md},
-  pageNav:{gap:8,paddingVertical:8},
+  pageNav:{flexDirection:"row",flexWrap:"wrap",gap:8,paddingVertical:8},
   pageNavButton:{paddingHorizontal:14,paddingVertical:10,borderRadius:radius.full,borderWidth:1,borderColor:colors.border,backgroundColor:colors.panel},
   pageNavButtonActive:{backgroundColor:colors.accent,borderColor:colors.accent},
   pageNavText:{color:colors.text,fontSize:12,fontWeight:"800"},
