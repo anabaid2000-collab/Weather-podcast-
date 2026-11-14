@@ -254,6 +254,7 @@ export default function App() {
       </ScrollView>
       <Text style={styles.pageHeading}>{({home:"Your weather",story:"Weather Story",rain:"Rain & Air Quality",sun:"Sun & Sky",travel:"Travel Planner",dashboard:"Personal Dashboard",more:"More tools"})[page]}</Text>
 {page === "home" ? <>
+{page === "home" ? <>
       <Text style={styles.heading}>Your sky, right now.</Text>
       <Text style={styles.subheading}>Clear forecasts. Better plans.</Text>
       <View style={styles.searchRow}>
@@ -266,10 +267,13 @@ export default function App() {
           {favorites.map((name) => <Pressable key={name} onPress={() => loadCity(name)} style={styles.chip}><Text style={styles.chipText}>{name}</Text></Pressable>)}
         </ScrollView>
       </View> : null}
+
+</> : null}
       {loading ? <View style={styles.state}><ActivityIndicator size="large" color={colors.accent}/><Text style={styles.muted}>Getting your forecast…</Text></View>
       : error && !current ? <View style={styles.state}><Text style={styles.weatherIcon}>☁️</Text><Text style={styles.cardTitle}>Weather unavailable</Text><Text style={styles.muted}>{error}</Text><Pressable onPress={() => loadCity(query)} style={styles.retry}><Text style={styles.buttonText}>Try again</Text></Pressable></View>
       : current && daily ? <>
         {error ? <Text style={styles.inlineError}>{error}</Text> : null}
+{page === "home" ? <>
         <View style={styles.hero}>
           <View style={styles.top}>
             <View style={{flex:1}}><Text style={styles.place}>{place?.name}{place?.admin1 ? ", " + place.admin1 : ""}</Text><Text style={styles.muted}>{place?.country}</Text></View>
@@ -287,8 +291,8 @@ export default function App() {
           <Text style={styles.timestamp}>Local time · {current.time?.replace("T"," ")}</Text>
           <Pressable onPress={() => Linking.openURL("https://www.openstreetmap.org/?mlat=" + place.latitude + "&mlon=" + place.longitude + "#map=10/" + place.latitude + "/" + place.longitude)} style={styles.mapLink}><Text style={styles.mapLinkText}>⌖  View this city on map</Text></Pressable>
         </View>
-
 </> : null}
+
 
 
 {page === "story" ? <>
