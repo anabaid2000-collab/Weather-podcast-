@@ -42,18 +42,19 @@ jobs:
           const fs = require('fs');
           const file = 'android/app/src/main/AndroidManifest.xml';
           let xml = fs.readFileSync(file, 'utf8');
-          const applicationTag = /<application\\b[^>]*>/;
-          if (!applicationTag.test(xml)) throw new Error('Android application tag not found');
-          const metadata = '    <meta-data android:name="expo.modules.updates.EXPO_UPDATES_REQUEST_HEADERS" android:value="{&quot;expo-channel-name&quot;:&quot;preview&quot;}"/>\\n';
-          if (xml.includes('expo.modules.updates.EXPO_UPDATES_REQUEST_HEADERS')) {
-            xml = xml.replace(/\\s*<meta-data android:name="expo\\.modules\\.updates\\.EXPO_UPDATES_REQUEST_HEADERS"[^>]*\\/>/, '\\n' + metadata.trim());
-          } else {
-            xml = xml.replace(applicationTag, match => match + '\\n' + metadata);
-          }
+          const tagStart = xml.indexOf('<application');
+          if (tagStart < 0) throw new Error('Android application tag not found');
+          const tagEnd = xml.indexOf('>', tagStart);
+          if (tagEnd < 0) throw new Error('Android application tag is incomplete');
+          const marker = 'expo.modules.updates.EXPO_UPDATES_REQUEST_HEADERS';
+          const lines = xml.split('\n').filter(line => !line.includes(marker));
+          xml = lines.join('\n');
+          const insertAt = xml.indexOf('>', xml.indexOf('<application')) + 1;
+          const metadata = '\n        <meta-data android:name="expo.modules.updates.EXPO_UPDATES_REQUEST_HEADERS" android:value="{&quot;expo-channel-name&quot;:&quot;preview&quot;}"/>';
+          xml = xml.slice(0, insertAt) + metadata + xml.slice(insertAt);
           fs.writeFileSync(file, xml);
           if (!xml.includes('&quot;expo-channel-name&quot;:&quot;preview&quot;')) throw new Error('Preview channel header was not configured');
           NODE
-
       - name: Explicitly enable JS bundling for debug
         run: |
           node <<'NODE'
