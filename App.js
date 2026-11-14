@@ -254,7 +254,6 @@ export default function App() {
       </ScrollView>
       <Text style={styles.pageHeading}>{({home:"Your weather",story:"Weather Story",rain:"Rain & Air Quality",sun:"Sun & Sky",travel:"Travel Planner",dashboard:"Personal Dashboard",more:"More tools"})[page]}</Text>
 {page === "home" ? <>
-{page === "home" ? <>
       <Text style={styles.heading}>Your sky, right now.</Text>
       <Text style={styles.subheading}>Clear forecasts. Better plans.</Text>
       <View style={styles.searchRow}>
