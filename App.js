@@ -65,6 +65,7 @@ export default function App() {
   const [travelLoading, setTravelLoading] = useState(false);
   const [travelError, setTravelError] = useState("");
   const [offlineCopy, setOfflineCopy] = useState(false);
+  const [page, setPage] = useState("home");
   const temp = (value) => number(unit === "F" && Number.isFinite(value) ? value * 9 / 5 + 32 : value, "°" + unit);
 
 
@@ -243,6 +244,16 @@ export default function App() {
         <View><Text style={styles.brand}>SKYCAST</Text><Text style={styles.eyebrow}>YOUR WEATHER COMPANION</Text></View>
         <Text style={styles.live}>● LIVE DATA</Text>
       </View>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.pageNav}>
+        {[
+          ["home","Home"],["story","Weather Story"],["rain","Rain & Air"],["sun","Sun & Sky"],
+          ["travel","Travel"],["dashboard","Dashboard"],["more","More"]
+        ].map(([key,label]) => <Pressable key={key} accessibilityRole="button" accessibilityState={{selected:page===key}} onPress={() => setPage(key)} style={[styles.pageNavButton,page===key&&styles.pageNavButtonActive]}>
+          <Text style={[styles.pageNavText,page===key&&styles.pageNavTextActive]}>{label}</Text>
+        </Pressable>)}
+      </ScrollView>
+      <Text style={styles.pageHeading}>{({home:"Your weather",story:"Weather Story",rain:"Rain & Air Quality",sun:"Sun & Sky",travel:"Travel Planner",dashboard:"Personal Dashboard",more:"More tools"})[page]}</Text>
+{page === "home" ? <>
       <Text style={styles.heading}>Your sky, right now.</Text>
       <Text style={styles.subheading}>Clear forecasts. Better plans.</Text>
       <View style={styles.searchRow}>
@@ -277,11 +288,19 @@ export default function App() {
           <Pressable onPress={() => Linking.openURL("https://www.openstreetmap.org/?mlat=" + place.latitude + "&mlon=" + place.longitude + "#map=10/" + place.latitude + "/" + place.longitude)} style={styles.mapLink}><Text style={styles.mapLinkText}>⌖  View this city on map</Text></Pressable>
         </View>
 
+</> : null}
+
+
+{page === "story" ? <>
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Your written weather briefing</Text>
           <View style={styles.briefing}><Text style={styles.briefingKicker}>THE DAILY OUTLOOK</Text><Text style={styles.briefingText}>{briefing}</Text><Text style={styles.briefingFooter}>Updated with the latest available forecast · No audio or speech</Text></View>
         </View>
 
+</> : null}
+
+
+{page === "rain" ? <>
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Environment snapshot</Text>
           <View style={styles.environment}>
@@ -295,6 +314,10 @@ export default function App() {
 
         {daily.precipitation_probability_max?.[0] >= 60 ? <View style={styles.alert}><Text style={styles.alertTitle}>☂ Rain heads-up</Text><Text style={styles.alertText}>There is a {Math.round(daily.precipitation_probability_max[0])}% chance of precipitation today. Consider carrying an umbrella.</Text></View> : null}
 
+</> : null}
+
+
+{page === "home" ? <>
         <View style={styles.section}>
           <View style={styles.sectionTop}><Text style={styles.sectionTitle}>Next 12 hours</Text><Text style={styles.eyebrow}>HOURLY</Text></View>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.hourly}>
@@ -320,7 +343,11 @@ export default function App() {
         </View>
       </> : null}
 
+</> : null}
 
+
+
+{page === "rain" ? <>
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Rain predictor</Text>
           <View style={styles.featureCard}>
@@ -336,6 +363,10 @@ export default function App() {
           </View>
         </View>
 
+</> : null}
+
+
+{page === "sun" ? <>
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Sky & sun tracker</Text>
           <View style={styles.featureCard}>
@@ -347,6 +378,10 @@ export default function App() {
           </View>
         </View>
 
+</> : null}
+
+
+{page === "more" ? <>
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>What should I carry?</Text>
           <View style={styles.featureCard}>
@@ -383,6 +418,10 @@ export default function App() {
           </View>
         </View>
 
+</> : null}
+
+
+{page === "dashboard" ? <>
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Personal dashboard</Text>
           <View style={styles.featureCard}>
@@ -397,6 +436,10 @@ export default function App() {
           </View>
         </View>
 
+</> : null}
+
+
+{page === "travel" ? <>
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Travel weather planner</Text>
           <View style={styles.featureCard}>
@@ -416,6 +459,10 @@ export default function App() {
           </View>
         </View>
 
+</> : null}
+
+
+{page === "dashboard" ? <>
       <View style={styles.section}>
         <View style={styles.sectionTop}><Text style={styles.sectionTitle}>City comparison</Text><Text style={styles.eyebrow}>YOUR SAVED PLACES</Text></View>
         <Text style={styles.muted}>Save at least two cities to compare their current temperatures.</Text>
@@ -424,6 +471,17 @@ export default function App() {
         </Pressable>
         {compare.map((item) => <View key={item.name} style={styles.compareRow}><Text style={styles.place}>{item.name}</Text><Text style={styles.compareCondition}>{describe(item.code)[1]} {describe(item.code)[0]}</Text><Text style={styles.compareTemp}>{number(item.temperature,"°C")}</Text></View>)}
       </View>
+</> : null}
+
+
+
+      {page === "more" ? <View style={styles.section}>
+        <Pressable accessibilityRole="button" onPress={() => place && Linking.openURL("https://www.openstreetmap.org/?mlat="+place.latitude+"&mlon="+place.longitude+"#map=10/"+place.latitude+"/"+place.longitude)} style={styles.toolButton}><Text style={styles.toolButtonTitle}>⌖  Open Live Weather Map</Text><Text style={styles.toolButtonHint}>View the selected city on an interactive map</Text></Pressable>
+        <Pressable accessibilityRole="button" onPress={() => setPage("dashboard")} style={styles.toolButton}><Text style={styles.toolButtonTitle}>★  Saved cities & settings</Text><Text style={styles.toolButtonHint}>Manage favourite places and temperature units</Text></Pressable>
+        <Pressable accessibilityRole="button" onPress={() => setPage("sun")} style={styles.toolButton}><Text style={styles.toolButtonTitle}>☀  Weather calendar</Text><Text style={styles.toolButtonHint}>See the seven-day outlook and daylight times</Text></Pressable>
+        <Pressable accessibilityRole="button" onPress={() => setPage("rain")} style={styles.toolButton}><Text style={styles.toolButtonTitle}>☂  Rain & air quality</Text><Text style={styles.toolButtonHint}>Check rain chances and air-quality readings</Text></Pressable>
+        <Text style={styles.muted}>More tools use the same live forecast. Some map details open in your browser.</Text>
+      </View> : null}
       <Text style={styles.footer}>{offlineCopy ? "Offline mode · Showing your last saved forecast. Reconnect to refresh live data. " : ""}Weather and air-quality data by Open-Meteo. Forecasts are estimates and can change.</Text>
       <Pressable onPress={() => loadCity(place?.name || query)} style={styles.refresh}><Text style={styles.refreshText}>↻  Refresh forecast</Text></Pressable>
     </ScrollView>
@@ -434,6 +492,15 @@ function Metric({label,value}) { return <View style={styles.metric}><Text style=
 
 const styles = StyleSheet.create({
   screen:{flex:1,backgroundColor:colors.background},content:{padding:spacing.lg,paddingTop:spacing.xl,paddingBottom:44,gap:spacing.md},
+  pageNav:{gap:8,paddingVertical:8},
+  pageNavButton:{paddingHorizontal:14,paddingVertical:10,borderRadius:radius.full,borderWidth:1,borderColor:colors.border,backgroundColor:colors.panel},
+  pageNavButtonActive:{backgroundColor:colors.accent,borderColor:colors.accent},
+  pageNavText:{color:colors.text,fontSize:12,fontWeight:"800"},
+  pageNavTextActive:{color:colors.background},
+  pageHeading:{color:colors.text,fontSize:24,fontWeight:"900",marginTop:spacing.sm,marginBottom:spacing.xs},
+  toolButton:{backgroundColor:colors.panel,borderWidth:1,borderColor:colors.border,borderRadius:radius.lg,padding:spacing.lg,gap:6},
+  toolButtonTitle:{color:colors.text,fontSize:15,fontWeight:"800"},
+  toolButtonHint:{color:colors.muted,fontSize:11,lineHeight:16},
   top:{flexDirection:"row",justifyContent:"space-between",alignItems:"center",gap:8},brand:{color:colors.text,fontSize:22,fontWeight:"900",letterSpacing:4},
   eyebrow:{color:colors.muted,fontSize:9,letterSpacing:1.5,marginTop:4},live:{color:colors.accent,fontSize:9,fontWeight:"800",letterSpacing:1},
   heading:{color:colors.text,fontSize:28,fontWeight:"800",marginTop:spacing.lg},subheading:{color:colors.muted,fontSize:14,marginTop:-8},
