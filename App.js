@@ -202,8 +202,13 @@ export default function App() {
   };
 
   const current = data?.forecast?.current;
-  const daily = data?.forecast?.daily;
-  const hourly = data?.forecast?.hourly;
+  const daily = data?.forecast?.daily || {
+    precipitation_probability_max: [], uv_index_max: [], sunrise: [], sunset: [],
+    time: [], weather_code: [], temperature_2m_max: [], temperature_2m_min: []
+  };
+  const hourly = data?.forecast?.hourly || {
+    time: [], temperature_2m: [], precipitation_probability: [], uv_index: [], weather_code: []
+  };
   const foundHourIndex = hourly?.time?.findIndex((time) => time >= current?.time) ?? 0;
   const hourlyStart = Math.max(0, foundHourIndex);
   const condition = current ? describe(current.weather_code) : null;
@@ -347,8 +352,8 @@ export default function App() {
           <View style={styles.featureCard}>
             {(daily.precipitation_probability_max?.[0] >= 40 ? ["☂️ Umbrella or raincoat"] : ["🕶️ Sunglasses if heading into bright sunshine"]).concat(
               (daily.uv_index_max?.[0] >= 6 ? ["🧴 Sun protection and a cap"] : []),
-              (current.temperature_2m >= 30 ? ["💧 Water bottle"] : current.temperature_2m <= 18 ? ["🧥 A light warm layer"] : ["👟 Comfortable shoes"]),
-              (current.wind_speed_10m >= 25 ? ["💨 Secure loose items outdoors"] : [])
+              (current?.temperature_2m >= 30 ? ["💧 Water bottle"] : current?.temperature_2m <= 18 ? ["🧥 A light warm layer"] : ["👟 Comfortable shoes"]),
+              (current?.wind_speed_10m >= 25 ? ["💨 Secure loose items outdoors"] : [])
             ).map((item) => <Text key={item} style={styles.featureText}>{item}</Text>)}
             <Text style={styles.featureHint}>Suggestions are based on the current forecast, not a safety guarantee.</Text>
           </View>
