@@ -272,18 +272,10 @@ export default function App() {
           <Text style={[styles.pageNavText,page===key&&styles.pageNavTextActive]}>{label}</Text>
         </Pressable>)}
       </View>
-      <Text style={styles.pageHeading}>{({home:"Your weather",story:"Weather Story",rain:"Rain & Air Quality",sun:"Sun & Sky",travel:"Travel Planner",dashboard:"Personal Dashboard",more:"More tools"})[page]}</Text>
+      {page !== "home" ? <Text style={styles.pageHeading}>{({story:"Weather Story",rain:"Rain & Air Quality",sun:"Sun & Sky",travel:"Travel Planner",dashboard:"Personal Dashboard",more:"More tools"})[page]}</Text> : null}
 {page === "home" ? <>
       <Text style={styles.heading}>Your sky, right now.</Text>
       <Text style={styles.subheading}>A little sunshine for your day.</Text>
-      <View style={styles.welcomeSticker}>
-        <SkyBuddy />
-        <View style={{flex:1}}>
-          <Text style={styles.welcomeTitle}>Hey, sky explorer!</Text>
-          <Text style={styles.welcomeCopy}>Your forecast buddy is ready with today's outlook.</Text>
-        </View>
-        <Text style={styles.welcomeStar}>✦</Text>
-      </View>
       <View style={styles.searchRow}>
         <TextInput accessibilityLabel="Search city" value={query} onChangeText={setQuery} onSubmitEditing={() => loadCity(query)} returnKeyType="search" placeholder="Search any city" placeholderTextColor={colors.muted} style={styles.input}/>
         <Pressable accessibilityRole="button" onPress={() => loadCity(query)} style={styles.button}><Text style={styles.buttonText}>Search</Text></Pressable>
@@ -306,7 +298,6 @@ export default function App() {
           <View style={styles.top}>
             <View style={{flex:1}}><Text style={styles.place}>{place?.name}{place?.admin1 ? ", " + place.admin1 : ""}</Text><Text style={styles.muted}>{place?.country}</Text></View>
             <Pressable accessibilityRole="button" accessibilityLabel={isFavorite ? "Remove saved city" : "Save city"} onPress={toggleFavorite} style={styles.favorite}><Text style={styles.favoriteText}>{isFavorite ? "★ Saved" : "☆ Save city"}</Text></Pressable>
-            <WeatherMotion><Text style={styles.heroIcon}>{condition[1]}</Text></WeatherMotion>
           </View>
           <Text style={styles.temperature}>{temp(current.temperature_2m)}</Text>
           <Text style={styles.condition}>{condition[0]}</Text>
@@ -610,7 +601,7 @@ function SkyBuddy() {
 function Metric({label,value}) { return <View style={styles.metric}><Text style={styles.metricLabel}>{label}</Text><Text style={styles.metricValue}>{value}</Text></View>; }
 
 const styles = StyleSheet.create({
-  screen:{flex:1,backgroundColor:colors.background},content:{padding:spacing.lg,paddingTop:spacing.xl,paddingBottom:44,gap:spacing.md},
+  screen:{flex:1,backgroundColor:colors.background},content:{padding:spacing.lg,paddingTop:48,paddingBottom:64,gap:spacing.md},
   pageNav:{flexDirection:"row",flexWrap:"wrap",gap:9,paddingVertical:10},
   pageNavButton:{paddingHorizontal:15,paddingVertical:10,borderRadius:radius.full,borderWidth:1,borderColor:"#354267",backgroundColor:"#171F3D"},
   pageNavButtonActive:{backgroundColor:"#A8F0E0",borderColor:"#A8F0E0"},
@@ -644,13 +635,13 @@ const styles = StyleSheet.create({
   toolButtonHint:{color:colors.muted,fontSize:11,lineHeight:16},
   top:{flexDirection:"row",justifyContent:"space-between",alignItems:"center",gap:8},brand:{color:colors.text,fontSize:23,fontWeight:"900",letterSpacing:4},
   eyebrow:{color:colors.muted,fontSize:9,letterSpacing:1.5,marginTop:4},live:{color:colors.accent,fontSize:9,fontWeight:"800",letterSpacing:1},
-  heading:{color:colors.text,fontSize:30,fontWeight:"900",letterSpacing:-0.8,marginTop:spacing.lg},subheading:{color:colors.muted,fontSize:14,marginTop:-8,lineHeight:21},
+  heading:{color:colors.text,fontSize:27,fontWeight:"900",letterSpacing:-0.6,marginTop:spacing.sm},subheading:{color:colors.muted,fontSize:14,marginTop:-5,lineHeight:21},
   searchRow:{flexDirection:"row",gap:spacing.sm,marginTop:spacing.sm},input:{flex:1,minHeight:48,borderRadius:radius.md,paddingHorizontal:spacing.md,color:colors.text,backgroundColor:colors.panel,borderWidth:1,borderColor:colors.border,fontSize:15},
   button:{backgroundColor:colors.accent,borderRadius:radius.md,justifyContent:"center",paddingHorizontal:spacing.lg},buttonText:{color:colors.background,fontWeight:"800"},
   state:{minHeight:180,backgroundColor:colors.panel,borderRadius:radius.lg,justifyContent:"center",alignItems:"center",padding:spacing.lg,gap:spacing.sm},
   muted:{color:colors.muted,fontSize:12,lineHeight:19},weatherIcon:{fontSize:38},cardTitle:{color:colors.text,fontSize:18,fontWeight:"800"},
   retry:{backgroundColor:colors.accent,borderRadius:radius.md,paddingHorizontal:spacing.lg,paddingVertical:spacing.sm,marginTop:spacing.sm},
-  weatherScene:{height:190,borderRadius:23,overflow:"hidden",backgroundColor:"#77B8E8",marginBottom:18,position:"relative"},
+  weatherScene:{height:164,borderRadius:20,overflow:"hidden",backgroundColor:"#77B8E8",marginBottom:16,position:"relative"},
   sceneSky:{...StyleSheet.absoluteFillObject,backgroundColor:"#82C7ED"},
   sceneCloud:{position:"absolute",top:13,left:22,fontSize:48},
   sceneSun:{position:"absolute",top:12,right:24,fontSize:39},
@@ -658,13 +649,13 @@ const styles = StyleSheet.create({
   sceneHills:{position:"absolute",bottom:24,left:-12,right:-12,height:72,backgroundColor:"#78B78A",borderTopLeftRadius:90,borderTopRightRadius:90},
   sceneMushroom:{position:"absolute",bottom:27,left:22,fontSize:67},
   sceneTree:{position:"absolute",bottom:25,right:20,fontSize:74},
-  sceneFrog:{position:"absolute",bottom:24,left:"46%",alignItems:"center",zIndex:3},
-  sceneFrogEmoji:{fontSize:61},
+  sceneFrog:{position:"absolute",bottom:23,left:"43%",alignItems:"center",zIndex:3},
+  sceneFrogEmoji:{fontSize:68},
   sceneProp:{position:"absolute",right:-17,top:5,fontSize:25},
   sceneGround:{position:"absolute",bottom:0,left:0,right:0,height:28,backgroundColor:"#477C67",opacity:0.8},
   sceneCaption:{position:"absolute",bottom:8,left:10,right:10,alignItems:"center",zIndex:5},
   sceneCaptionText:{color:"#173A4B",fontSize:11,fontWeight:"900",backgroundColor:"rgba(255,255,255,0.78)",paddingHorizontal:12,paddingVertical:5,borderRadius:20,overflow:"hidden"},
-  hero:{backgroundColor:"#182747",borderRadius:30,borderWidth:1,borderColor:"#394C79",padding:spacing.lg,shadowColor:"#050A18",shadowOpacity:0.24,shadowRadius:18,shadowOffset:{width:0,height:9},elevation:5},
+  hero:{backgroundColor:"#182747",borderRadius:24,borderWidth:1,borderColor:"#303F66",padding:spacing.md,shadowColor:"#050A18",shadowOpacity:0.16,shadowRadius:12,shadowOffset:{width:0,height:5},elevation:3},
   place:{color:colors.text,fontSize:16,fontWeight:"800"},favorite:{borderWidth:1,borderColor:colors.border,borderRadius:radius.full,paddingHorizontal:10,paddingVertical:7},favoriteText:{color:colors.accent,fontSize:11,fontWeight:"800"},
   heroIcon:{fontSize:48},heroIconMotion:{width:94,height:94,alignItems:"center",justifyContent:"center",borderRadius:30,backgroundColor:"#26365E",borderWidth:1,borderColor:"#536394",shadowColor:"#A8F0E0",shadowOpacity:0.16,shadowRadius:14,shadowOffset:{width:0,height:5},elevation:4},temperature:{color:colors.accent,fontSize:76,fontWeight:"200",letterSpacing:-4,marginTop:12},
   condition:{color:colors.text,fontSize:17,fontWeight:"700",marginTop:-4},metrics:{flexDirection:"row",borderTopWidth:1,borderTopColor:colors.border,marginTop:spacing.lg,paddingTop:spacing.md,justifyContent:"space-between",gap:8},
