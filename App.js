@@ -258,7 +258,7 @@ export default function App() {
       <Text style={styles.heading}>Your sky, right now.</Text>
       <Text style={styles.subheading}>A little sunshine for your day.</Text>
       <View style={styles.welcomeSticker}>
-        <Text style={styles.welcomeEmoji}>🌈</Text>
+        <SkyBuddy />
         <View style={{flex:1}}>
           <Text style={styles.welcomeTitle}>Hey, sky explorer!</Text>
           <Text style={styles.welcomeCopy}>Your forecast buddy is ready with today's outlook.</Text>
@@ -525,6 +525,32 @@ function WeatherMotion({children}) {
   </Animated.View>;
 }
 
+function SkyBuddy() {
+  const reducedMotion = useReducedMotion();
+  const bob = useSharedValue(0);
+  const sparkle = useSharedValue(0);
+  useEffect(() => {
+    if (reducedMotion) { bob.set(0); sparkle.set(0); return; }
+    bob.set(withRepeat(withTiming(-6, { duration: 1100 }), -1, true));
+    sparkle.set(withRepeat(withTiming(1, { duration: 900 }), -1, true));
+    return () => { cancelAnimation(bob); cancelAnimation(sparkle); };
+  }, [reducedMotion, bob, sparkle]);
+  const buddyStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: bob.get() }, { rotate: (bob.get() * -0.45) + "deg" }]
+  }));
+  const sparkleStyle = useAnimatedStyle(() => ({ opacity: 0.35 + sparkle.get() * 0.65, transform: [{ scale: 0.8 + sparkle.get() * 0.25 }] }));
+  return <Animated.View style={[styles.buddyWrap, buddyStyle]} accessibilityLabel="Animated smiling sky mascot">
+    <Animated.Text style={[styles.buddySparkle, styles.buddySparkleLeft, sparkleStyle]}>✦</Animated.Text>
+    <Animated.Text style={[styles.buddySparkle, styles.buddySparkleRight, sparkleStyle]}>✧</Animated.Text>
+    <View style={styles.buddyCloud}>
+      <View style={styles.buddyEyes}><View style={styles.buddyEye}/><View style={styles.buddyEye}/></View>
+      <View style={styles.buddySmile}/>
+      <View style={styles.buddyCheekLeft}/><View style={styles.buddyCheekRight}/>
+    </View>
+    <View style={styles.buddyBase}/>
+  </Animated.View>;
+}
+
 function Metric({label,value}) { return <View style={styles.metric}><Text style={styles.metricLabel}>{label}</Text><Text style={styles.metricValue}>{value}</Text></View>; }
 
 const styles = StyleSheet.create({
@@ -537,6 +563,17 @@ const styles = StyleSheet.create({
   pageHeading:{color:colors.text,fontSize:26,fontWeight:"900",letterSpacing:-0.7,marginTop:spacing.sm,marginBottom:spacing.xs},
   welcomeSticker:{flexDirection:"row",alignItems:"center",gap:12,backgroundColor:"#202C50",borderWidth:1,borderColor:"#40517D",borderRadius:22,padding:14,marginTop:spacing.sm},
   welcomeEmoji:{fontSize:30},
+  buddyWrap:{width:64,height:54,alignItems:"center",justifyContent:"center",marginRight:2},
+  buddyCloud:{width:48,height:36,borderRadius:22,backgroundColor:"#FFE7A8",alignItems:"center",justifyContent:"center",borderWidth:1.5,borderColor:"#FFF4D8",shadowColor:"#FFD98A",shadowOpacity:0.3,shadowRadius:8,shadowOffset:{width:0,height:3},elevation:3},
+  buddyBase:{position:"absolute",bottom:7,width:32,height:9,borderRadius:8,backgroundColor:"#FFE7A8"},
+  buddyEyes:{flexDirection:"row",gap:10,marginTop:3},
+  buddyEye:{width:4,height:6,borderRadius:4,backgroundColor:"#394267"},
+  buddySmile:{width:9,height:5,borderBottomWidth:1.8,borderColor:"#394267",borderRadius:8,marginTop:1},
+  buddyCheekLeft:{position:"absolute",left:8,top:21,width:6,height:3,borderRadius:4,backgroundColor:"#F5A6A6"},
+  buddyCheekRight:{position:"absolute",right:8,top:21,width:6,height:3,borderRadius:4,backgroundColor:"#F5A6A6"},
+  buddySparkle:{position:"absolute",color:"#FFE39A",fontSize:16,fontWeight:"900",zIndex:2},
+  buddySparkleLeft:{left:2,top:0},
+  buddySparkleRight:{right:1,top:8},
   welcomeTitle:{color:"#F8F6FF",fontSize:14,fontWeight:"900"},
   welcomeCopy:{color:"#B8C3E0",fontSize:11,lineHeight:16,marginTop:3},
   welcomeStar:{color:"#FFD98A",fontSize:23},
