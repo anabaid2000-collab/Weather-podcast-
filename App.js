@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import * as Updates from "expo-updates";
-import { ActivityIndicator, Linking, Pressable, ScrollView, StatusBar, StyleSheet, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, AppState, Linking, Pressable, ScrollView, StatusBar, StyleSheet, Text, TextInput, View } from "react-native";
 import Animated, { cancelAnimation, useAnimatedStyle, useReducedMotion, useSharedValue, withRepeat, withTiming } from "react-native-reanimated";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { auth, db } from "./src/firebase";
@@ -60,6 +60,7 @@ export default function App() {
   const [compare, setCompare] = useState([]);
   const [comparing, setComparing] = useState(false);
   const latestWeatherRequest = useRef(0);
+  const lastWeatherRefresh = useRef(0);
   const [unit, setUnit] = useState("C");
   const [alertsEnabled, setAlertsEnabled] = useState(true);
   const [travelQuery, setTravelQuery] = useState("");
@@ -81,6 +82,7 @@ export default function App() {
       const result = await getWeather(city);
       if (requestId !== latestWeatherRequest.current) return;
       setPlace(city); setData(result); setQuery(city.name); setCompare([]); setOfflineCopy(false);
+      lastWeatherRefresh.current = Date.now();
       try { await AsyncStorage.setItem("skycast.lastWeather.v1", JSON.stringify({ place: city, data: result, savedAt: Date.now() })); } catch {}
     } catch (err) {
       if (requestId === latestWeatherRequest.current) setError(err.message || "Could not load weather.");
@@ -161,6 +163,20 @@ export default function App() {
     void applyAvailableUpdate();
     return () => { active = false; };
   }, []);
+
+  useEffect(() => {
+    if (!place?.name) return undefined;
+    const refreshIfStale = () => {
+      if (Date.now() - lastWeatherRefresh.current >= 5 * 60 * 1000) void loadCity(place.name);
+    };
+    const interval = setInterval(() => {
+      if (Date.now() - lastWeatherRefresh.current >= 15 * 60 * 1000) void loadCity(place.name);
+    }, 60 * 1000);
+    const subscription = AppState.addEventListener("change", (state) => {
+      if (state === "active") refreshIfStale();
+    });
+    return () => { clearInterval(interval); subscription.remove(); };
+  }, [place?.name, loadCity]);
 
   const saveFavorites = async (next) => {
     setFavorites(next);
@@ -294,7 +310,7 @@ export default function App() {
         {error ? <Text style={styles.inlineError}>{error}</Text> : null}
 {page === "home" ? <>
         <View style={styles.hero}>
-          <WeatherScene code={current.weather_code}/>
+          <WeatherScene code={current.weather_code} windSpeed={current.wind_speed_10m}/>
           <View style={styles.top}>
             <View style={{flex:1}}><Text style={styles.place}>{place?.name}{place?.admin1 ? ", " + place.admin1 : ""}</Text><Text style={styles.muted}>{place?.country}</Text></View>
             <Pressable accessibilityRole="button" accessibilityLabel={isFavorite ? "Remove saved city" : "Save city"} onPress={toggleFavorite} style={styles.favorite}><Text style={styles.favoriteText}>{isFavorite ? "★ Saved" : "☆ Save city"}</Text></Pressable>
@@ -510,35 +526,46 @@ export default function App() {
   </View>;
 }
 
-function WeatherScene({code}) {
+function WeatherScene({code,windSpeed=0}) {
   const reduced = useReducedMotion();
   const bob = useSharedValue(0);
   const drift = useSharedValue(0);
-  const rain = code >= 51 && code <= 82 || code >= 95;
-  const snow = code >= 71 && code <= 86;
+  const rain = (code >= 51 && code <= 67) || (code >= 80 && code <= 82) || code >= 95;
+  const snow = (code >= 71 && code <= 77) || code === 85 || code === 86;
+  const storm = code >= 95;
+  const fog = code === 45 || code === 48;
   const sunny = code <= 1;
-  const cloudy = code === 2 || code === 3 || code === 45 || code === 48;
-  const action = rain ? "Froggy is checking the laundry in the rain." : snow ? "Froggy is enjoying a snowy day." : sunny ? "Froggy is soaking up the sunshine." : "Froggy is watching the changing sky.";
+  const partlyCloudy = code === 2;
+  const windy = windSpeed >= 25;
+  const skyColor = storm ? "#77838A" : rain ? "#AFC2C8" : snow ? "#DCE5E6" : fog ? "#D5DAD5" : sunny ? "#EBDCB8" : "#DCE9E5";
+  const hillBack = storm ? "#8E9A8C" : snow ? "#C7D7D4" : rain ? "#9DBAA5" : "#A9C49B";
+  const hillFront = storm ? "#687E75" : snow ? "#A9C5C2" : rain ? "#7FA58E" : "#7FA985";
+  const action = storm ? "Froggy is watching the distant thunder." : snow ? "Froggy bundled up for a snowy day." : rain ? "Froggy is keeping dry under a little umbrella." : windy ? "A breezy day! Froggy is chasing a drifting leaf." : fog ? "Froggy is exploring the misty morning." : sunny ? "Froggy is enjoying a golden sunny day." : partlyCloudy ? "Froggy is playing between sun and clouds." : "Froggy is watching the clouds roll by.";
   useEffect(() => {
     if (reduced) { bob.set(0); drift.set(0); return; }
-    bob.set(withRepeat(withTiming(-4,{duration:1100}),-1,true));
-    drift.set(withRepeat(withTiming(6,{duration:2800}),-1,true));
+    bob.set(withRepeat(withTiming(snow ? -6 : sunny ? -3 : -4,{duration:snow?900:sunny?1450:1100}),-1,true));
+    drift.set(withRepeat(withTiming(windy ? 13 : 6,{duration:windy?1700:2800}),-1,true));
     return () => { cancelAnimation(bob); cancelAnimation(drift); };
-  },[reduced,bob,drift]);
+  },[reduced,bob,drift,snow,sunny,windy]);
   const frogStyle = useAnimatedStyle(() => ({transform:[{translateY:bob.get()}]}));
   const cloudStyle = useAnimatedStyle(() => ({transform:[{translateX:drift.get()}]}));
-  return <View style={styles.weatherScene}>
-    <View style={styles.sceneSky}/>
-    <View style={styles.sceneSunDisc}/>
+  return <View style={[styles.weatherScene,{backgroundColor:skyColor}]}>
+    <View style={[styles.sceneSky,{backgroundColor:skyColor}]}/>
+    {sunny || partlyCloudy ? <View style={[styles.sceneSunDisc,{opacity:sunny?1:0.55}]}/> : null}
     <Animated.View style={[styles.vectorCloud,cloudStyle]}>
-      <View style={styles.cloudPuffLarge}/><View style={styles.cloudPuffSmall}/><View style={styles.cloudBase}/>
+      <View style={[styles.cloudPuffLarge,(rain||storm||fog)&&{backgroundColor:"#E3E6E1"}]}/>
+      <View style={[styles.cloudPuffSmall,(rain||storm||fog)&&{backgroundColor:"#E3E6E1"}]}/>
+      <View style={[styles.cloudBase,(rain||storm||fog)&&{backgroundColor:"#E3E6E1"}]}/>
     </Animated.View>
     {rain ? <View style={styles.rainDrops}>
-      {[0,1,2,3,4].map((n)=><View key={n} style={[styles.rainDrop,{left:18+n*29,top:n%2?68:58}]}/>)}
+      {[0,1,2,3,4,5].map((n)=><View key={n} style={[styles.rainDrop,{left:12+n*27,top:n%2?68:58,backgroundColor:storm?"#D9E3E5":"#6AAFC2"}]}/>)}
     </View> : null}
-    {snow ? <Text style={styles.sceneSnow}>✳   ✳   ✳</Text> : null}
-    <View style={styles.sceneHillBack}/>
-    <View style={styles.sceneHillFront}/>
+    {snow ? <Text style={styles.sceneSnow}>✳   ❄   ✳</Text> : null}
+    {storm ? <Text style={styles.sceneLightning}>ϟ</Text> : null}
+    {windy ? <Animated.Text style={[styles.windLeaf,cloudStyle]}>🍃</Animated.Text> : null}
+    {fog ? <View style={styles.fogBand}/> : null}
+    <View style={[styles.sceneHillBack,{backgroundColor:hillBack}]}/>
+    <View style={[styles.sceneHillFront,{backgroundColor:hillFront}]}/>
     {rain ? <View style={styles.laundry}>
       <View style={styles.laundryLine}/>
       <View style={[styles.laundryPeg,{left:38}]}/>
@@ -554,13 +581,14 @@ function WeatherScene({code}) {
     <Animated.View style={[styles.flatFrog,frogStyle]}>
       <View style={styles.frogEyes}><View style={styles.frogEye}><View style={styles.frogPupil}/></View><View style={styles.frogEye}><View style={styles.frogPupil}/></View></View>
       <View style={styles.frogFace}><View style={styles.frogCheek}/><View style={styles.frogMouth}/><View style={styles.frogCheek}/></View>
-      {rain ? <View style={styles.frogUmbrella}><View style={styles.umbrellaCanopy}/><View style={styles.umbrellaHandle}/></View> : sunny ? <View style={styles.frogSunglasses}><View/><View/></View> : null}
+      {rain ? <View style={styles.frogUmbrella}><View style={styles.umbrellaCanopy}/><View style={styles.umbrellaHandle}/></View> : null}
+      {sunny ? <View style={styles.frogSunglasses}><View/><View/></View> : null}
+      {snow || windy ? <View style={styles.frogScarf}/> : null}
     </Animated.View>
     <View style={styles.sceneGround}/>
     <View style={styles.sceneCaption}><Text style={styles.sceneCaptionText}>{action}</Text></View>
   </View>;
 }
-
 function WeatherMotion({children}) {
   const reducedMotion = useReducedMotion();
   const drift = useSharedValue(0);
@@ -666,6 +694,9 @@ const styles = StyleSheet.create({
   rainDrops:{position:"absolute",left:26,top:56,width:170,height:65,zIndex:2},
   rainDrop:{position:"absolute",width:5,height:13,borderRadius:5,backgroundColor:"#54B9D5",transform:[{rotate:"18deg"}]},
   sceneSnow:{position:"absolute",top:74,right:22,color:"#FFFFFF",fontSize:18},
+  sceneLightning:{position:"absolute",top:65,right:53,color:"#F6D37B",fontSize:34,fontWeight:"900"},
+  windLeaf:{position:"absolute",top:89,left:155,fontSize:24,zIndex:3},
+  fogBand:{position:"absolute",top:88,left:-12,right:-12,height:18,backgroundColor:"rgba(255,255,255,0.42)",borderRadius:20,zIndex:2},
   sceneHillBack:{position:"absolute",bottom:25,left:-18,right:-18,height:76,backgroundColor:"#8CC69A",borderTopLeftRadius:100,borderTopRightRadius:100},
   sceneHillFront:{position:"absolute",bottom:0,left:-18,right:-18,height:48,backgroundColor:"#6EAD83",borderTopLeftRadius:100,borderTopRightRadius:100},
   laundry:{position:"absolute",right:18,top:23,width:190,height:85,zIndex:3},
@@ -687,6 +718,7 @@ const styles = StyleSheet.create({
   umbrellaCanopy:{width:38,height:20,backgroundColor:"#E7A0A0",borderTopLeftRadius:25,borderTopRightRadius:25,borderBottomLeftRadius:8,borderBottomRightRadius:8},
   umbrellaHandle:{width:2,height:22,backgroundColor:"#826A57"},
   frogSunglasses:{position:"absolute",top:7,left:15,right:15,flexDirection:"row",justifyContent:"space-between",gap:3},
+  frogScarf:{position:"absolute",top:58,left:12,width:55,height:9,borderRadius:6,backgroundColor:"#C98565",borderWidth:1,borderColor:"#F4D7B8",transform:[{rotate:"-5deg"}]},
   sceneGround:{position:"absolute",bottom:0,left:0,right:0,height:23,backgroundColor:"#5B9975",opacity:0.9},
   sceneCaption:{position:"absolute",bottom:7,left:10,right:10,alignItems:"center",zIndex:5},
   sceneCaptionText:{color:"#244B4A",fontSize:10,fontWeight:"800",backgroundColor:"rgba(255,255,255,0.88)",paddingHorizontal:12,paddingVertical:5,borderRadius:20,overflow:"hidden"},
