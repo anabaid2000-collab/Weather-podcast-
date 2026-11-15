@@ -310,7 +310,7 @@ export default function App() {
         {error ? <Text style={styles.inlineError}>{error}</Text> : null}
 {page === "home" ? <>
         <View style={styles.hero}>
-          <WeatherScene code={current.weather_code} windSpeed={current.wind_speed_10m}/>
+          <CatWeatherScene code={current.weather_code} windSpeed={current.wind_speed_10m}/>
           <View style={styles.top}>
             <View style={{flex:1}}><Text style={styles.place}>{place?.name}{place?.admin1 ? ", " + place.admin1 : ""}</Text><Text style={styles.muted}>{place?.country}</Text></View>
             <Pressable accessibilityRole="button" accessibilityLabel={isFavorite ? "Remove saved city" : "Save city"} onPress={toggleFavorite} style={styles.favorite}><Text style={styles.favoriteText}>{isFavorite ? "★ Saved" : "☆ Save city"}</Text></Pressable>
@@ -589,6 +589,63 @@ function WeatherScene({code,windSpeed=0}) {
     <View style={styles.sceneCaption}><Text style={styles.sceneCaptionText}>{action}</Text></View>
   </View>;
 }
+function CatWeatherScene({code,windSpeed=0}) {
+  const reduced = useReducedMotion();
+  const catBob = useSharedValue(0);
+  const firePulse = useSharedValue(0);
+  const rain = (code >= 51 && code <= 67) || (code >= 80 && code <= 82) || code >= 95;
+  const snow = (code >= 71 && code <= 77) || code === 85 || code === 86;
+  const storm = code >= 95;
+  const fog = code === 45 || code === 48;
+  const sunny = code <= 1;
+  const windy = windSpeed >= 25;
+  const sky = storm ? "#596B83" : rain ? "#91A9BC" : snow ? "#B8CAD5" : fog ? "#B9C7C9" : sunny ? "#D8B98E" : "#888ED7";
+  const caption = storm ? "A cozy shelter while the storm passes" : snow ? "A warm little camp on a snowy night" : rain ? "Listening to the rain by the fire" : windy ? "A breezy evening under the stars" : sunny ? "A golden evening at the campsite" : "A quiet night beneath the clouds";
+  useEffect(() => {
+    if (reduced) { catBob.set(0); firePulse.set(0); return; }
+    catBob.set(withRepeat(withTiming(-3,{duration:2100}),-1,true));
+    firePulse.set(withRepeat(withTiming(1,{duration:850}),-1,true));
+    return () => { cancelAnimation(catBob); cancelAnimation(firePulse); };
+  },[reduced,catBob,firePulse]);
+  const catStyle = useAnimatedStyle(() => ({transform:[{translateY:catBob.get()}]}));
+  const flameStyle = useAnimatedStyle(() => ({opacity:0.78+firePulse.get()*0.22,transform:[{scale:0.94+firePulse.get()*0.12}]}));
+  return <View style={[styles.catScene,{backgroundColor:sky}]}>
+    <View style={styles.catMoon}/>
+    <View style={styles.catStars}><Text style={styles.catStar}>✦</Text><Text style={styles.catStar}>✧</Text><Text style={styles.catStar}>·</Text></View>
+    {fog ? <View style={styles.catFog}/>:null}
+    {rain ? <View style={styles.catRain}><Text style={styles.catRainMarks}>╱  ╱  ╱  ╱  ╱  ╱</Text></View>:null}
+    {snow ? <Text style={styles.catSnow}>✳     ❄      ✳</Text>:null}
+    {storm ? <Text style={styles.catBolt}>ϟ</Text>:null}
+    <View style={styles.catFarHill}/>
+    <View style={styles.catPineLeft}><View style={styles.catPineTop}/><View style={styles.catPineMid}/><View style={styles.catPineLow}/><View style={styles.catPineTrunk}/></View>
+    <View style={styles.catPineRight}><View style={styles.catPineTop}/><View style={styles.catPineMid}/><View style={styles.catPineLow}/><View style={styles.catPineTrunk}/></View>
+    <View style={styles.catTent}><View style={styles.catTentDoor}/><View style={styles.catTentGlow}/></View>
+    <View style={styles.catGround}/>
+    <Animated.View style={[styles.catCharacter,catStyle]}>
+      <View style={styles.catTail}/>
+      <View style={styles.catBody}/>
+      <View style={styles.catPawLeft}/>
+      <View style={styles.catPawRight}/>
+      <View style={styles.catEarLeft}/>
+      <View style={styles.catEarRight}/>
+      <View style={styles.catHead}>
+        <View style={styles.catEyeLeft}/><View style={styles.catEyeRight}/>
+        <View style={styles.catNose}/><View style={styles.catSmile}/>
+        <View style={styles.catWhiskerLeft}/><View style={styles.catWhiskerRight}/>
+        <View style={styles.catCheekLeft}/><View style={styles.catCheekRight}/>
+      </View>
+      {snow || windy ? <View style={styles.catScarf}/>:null}
+      {rain ? <View style={styles.catHood}/> : null}
+    </Animated.View>
+    <View style={styles.catCampfireGlow}/>
+    <View style={styles.catLogs}><View style={styles.catLogOne}/><View style={styles.catLogTwo}/></View>
+    <Animated.View style={[styles.catFlames,flameStyle]}>
+      <View style={styles.catFlameOuter}/><View style={styles.catFlameMid}/><View style={styles.catFlameCore}/>
+    </Animated.View>
+    <View style={styles.catCaption}><Text style={styles.catCaptionText}>{caption}</Text></View>
+  </View>;
+}
+
 function WeatherMotion({children}) {
   const reducedMotion = useReducedMotion();
   const drift = useSharedValue(0);
@@ -644,6 +701,55 @@ function SkyBuddy() {
 function Metric({label,value}) { return <View style={styles.metric}><Text style={styles.metricLabel}>{label}</Text><Text style={styles.metricValue}>{value}</Text></View>; }
 
 const styles = StyleSheet.create({
+  catScene:{height:224,borderRadius:20,overflow:"hidden",position:"relative",marginBottom:16,borderWidth:1,borderColor:"#D8C8AE"},
+  catMoon:{position:"absolute",top:18,right:35,width:27,height:27,borderRadius:14,backgroundColor:"#F8E8C4",opacity:.9},
+  catStars:{position:"absolute",top:14,left:25,right:90,flexDirection:"row",justifyContent:"space-between"},
+  catStar:{color:"#FFF3D5",fontSize:17,fontWeight:"900"},
+  catFog:{position:"absolute",top:86,left:-10,right:-10,height:20,borderRadius:20,backgroundColor:"rgba(255,255,255,0.28)"},
+  catRain:{position:"absolute",top:50,left:15,right:15},
+  catRainMarks:{color:"#DCEAF2",fontSize:16,letterSpacing:7},
+  catSnow:{position:"absolute",top:55,left:25,color:"#FFFFFF",fontSize:17},
+  catBolt:{position:"absolute",top:45,right:92,color:"#F8D88A",fontSize:34,fontWeight:"900"},
+  catFarHill:{position:"absolute",bottom:37,left:-20,right:-20,height:95,borderTopLeftRadius:120,borderTopRightRadius:120,backgroundColor:"#617B80",opacity:.75},
+  catPineLeft:{position:"absolute",bottom:43,left:18,width:48,height:102,alignItems:"center"},
+  catPineRight:{position:"absolute",bottom:42,right:17,width:48,height:110,alignItems:"center"},
+  catPineTop:{position:"absolute",top:0,width:0,height:0,borderLeftWidth:17,borderRightWidth:17,borderBottomWidth:35,borderLeftColor:"transparent",borderRightColor:"transparent",borderBottomColor:"#456B63"},
+  catPineMid:{position:"absolute",top:20,width:0,height:0,borderLeftWidth:23,borderRightWidth:23,borderBottomWidth:42,borderLeftColor:"transparent",borderRightColor:"transparent",borderBottomColor:"#3E665D"},
+  catPineLow:{position:"absolute",top:43,width:0,height:0,borderLeftWidth:27,borderRightWidth:27,borderBottomWidth:43,borderLeftColor:"transparent",borderRightColor:"transparent",borderBottomColor:"#355D55"},
+  catPineTrunk:{position:"absolute",bottom:0,width:8,height:19,backgroundColor:"#765D4B"},
+  catTent:{position:"absolute",bottom:42,left:68,width:112,height:91,backgroundColor:"#C47B62",borderTopLeftRadius:62,borderTopRightRadius:62,borderBottomLeftRadius:8,borderBottomRightRadius:8,transform:[{skewX:"-7deg"}],borderWidth:2,borderColor:"#E9B68D"},
+  catTentDoor:{position:"absolute",bottom:0,left:36,width:38,height:59,backgroundColor:"#654E56",borderTopLeftRadius:28,borderTopRightRadius:28},
+  catTentGlow:{position:"absolute",bottom:10,left:47,width:16,height:28,borderRadius:10,backgroundColor:"#F7C77A",opacity:.75},
+  catGround:{position:"absolute",bottom:0,left:0,right:0,height:48,backgroundColor:"#405F56"},
+  catCharacter:{position:"absolute",bottom:35,left:"34%",width:112,height:115,alignItems:"center",zIndex:4},
+  catTail:{position:"absolute",bottom:13,left:0,width:48,height:18,borderWidth:9,borderColor:"#B96F48",borderLeftColor:"transparent",borderBottomColor:"#B96F48",borderRadius:24,transform:[{rotate:"-22deg"}]},
+  catBody:{position:"absolute",bottom:7,left:24,width:76,height:65,borderRadius:42,backgroundColor:"#D78D58",borderWidth:2,borderColor:"#A95F3F"},
+  catPawLeft:{position:"absolute",bottom:3,left:37,width:28,height:17,borderRadius:12,backgroundColor:"#F1C49A",borderWidth:1,borderColor:"#A95F3F",zIndex:2},
+  catPawRight:{position:"absolute",bottom:3,left:65,width:28,height:17,borderRadius:12,backgroundColor:"#F1C49A",borderWidth:1,borderColor:"#A95F3F",zIndex:2},
+  catEarLeft:{position:"absolute",top:4,left:23,width:0,height:0,borderLeftWidth:14,borderRightWidth:5,borderBottomWidth:27,borderLeftColor:"transparent",borderRightColor:"transparent",borderBottomColor:"#C77A4C",transform:[{rotate:"-13deg"}],zIndex:2},
+  catEarRight:{position:"absolute",top:2,right:20,width:0,height:0,borderLeftWidth:5,borderRightWidth:14,borderBottomWidth:28,borderLeftColor:"transparent",borderRightColor:"transparent",borderBottomColor:"#C77A4C",transform:[{rotate:"13deg"}],zIndex:2},
+  catHead:{position:"absolute",top:15,left:19,width:76,height:67,borderRadius:38,backgroundColor:"#E5A66F",borderWidth:2,borderColor:"#A95F3F",zIndex:3},
+  catEyeLeft:{position:"absolute",top:28,left:21,width:5,height:7,borderRadius:4,backgroundColor:"#493C3A"},
+  catEyeRight:{position:"absolute",top:28,right:21,width:5,height:7,borderRadius:4,backgroundColor:"#493C3A"},
+  catNose:{position:"absolute",top:39,left:34,width:8,height:6,borderRadius:5,backgroundColor:"#A85F65"},
+  catSmile:{position:"absolute",top:43,left:34,width:8,height:6,borderBottomWidth:1.5,borderColor:"#684844",borderRadius:8},
+  catWhiskerLeft:{position:"absolute",top:44,left:3,width:20,height:1,backgroundColor:"#F8E6CD",transform:[{rotate:"-8deg"}]},
+  catWhiskerRight:{position:"absolute",top:44,right:3,width:20,height:1,backgroundColor:"#F8E6CD",transform:[{rotate:"8deg"}]},
+  catCheekLeft:{position:"absolute",top:43,left:13,width:10,height:5,borderRadius:6,backgroundColor:"#E58C83"},
+  catCheekRight:{position:"absolute",top:43,right:13,width:10,height:5,borderRadius:6,backgroundColor:"#E58C83"},
+  catScarf:{position:"absolute",top:75,left:25,width:66,height:10,borderRadius:6,backgroundColor:"#7897A2",borderWidth:1,borderColor:"#E8D4B8",zIndex:5},
+  catHood:{position:"absolute",top:9,left:15,width:83,height:75,borderWidth:5,borderColor:"#D7B98D",borderRadius:42,zIndex:1},
+  catCampfireGlow:{position:"absolute",bottom:19,left:"57%",width:74,height:55,borderRadius:40,backgroundColor:"#ECA65D",opacity:.22},
+  catLogs:{position:"absolute",bottom:28,left:"59%",width:57,height:17,zIndex:4},
+  catLogOne:{position:"absolute",top:4,left:0,width:59,height:10,borderRadius:7,backgroundColor:"#785544",transform:[{rotate:"17deg"}]},
+  catLogTwo:{position:"absolute",top:4,left:0,width:59,height:10,borderRadius:7,backgroundColor:"#A16A4D",transform:[{rotate:"-17deg"}]},
+  catFlames:{position:"absolute",bottom:38,left:"65%",width:36,height:48,zIndex:5},
+  catFlameOuter:{position:"absolute",bottom:0,left:2,width:31,height:42,borderTopLeftRadius:25,borderTopRightRadius:25,borderBottomLeftRadius:16,borderBottomRightRadius:16,backgroundColor:"#F07845",transform:[{rotate:"7deg"}]},
+  catFlameMid:{position:"absolute",bottom:0,left:9,width:20,height:31,borderTopLeftRadius:18,borderTopRightRadius:18,borderBottomLeftRadius:12,borderBottomRightRadius:12,backgroundColor:"#FFC05F",transform:[{rotate:"-7deg"}]},
+  catFlameCore:{position:"absolute",bottom:0,left:14,width:10,height:18,borderTopLeftRadius:10,borderTopRightRadius:10,borderBottomLeftRadius:7,borderBottomRightRadius:7,backgroundColor:"#FFF0B8"},
+  catCaption:{position:"absolute",bottom:7,left:10,right:10,alignItems:"center",zIndex:6},
+  catCaptionText:{color:"#FFF8E9",fontSize:10,fontWeight:"800",backgroundColor:"rgba(40,55,63,0.62)",paddingHorizontal:12,paddingVertical:5,borderRadius:20,overflow:"hidden"},
+
   screen:{flex:1,backgroundColor:colors.background},content:{padding:spacing.lg,paddingTop:48,paddingBottom:64,gap:spacing.md},
   pageNav:{flexDirection:"row",flexWrap:"wrap",gap:9,paddingVertical:10},
   pageNavButton:{paddingHorizontal:15,paddingVertical:10,borderRadius:radius.full,borderWidth:1,borderColor:"#D8C8AE",backgroundColor:"#FFF9EF"},
