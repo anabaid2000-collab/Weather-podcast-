@@ -517,29 +517,44 @@ function WeatherScene({code}) {
   const rain = code >= 51 && code <= 82 || code >= 95;
   const snow = code >= 71 && code <= 86;
   const sunny = code <= 1;
-  const windy = code === 45 || code === 48 || code === 3;
-  const action = snow ? "Froggy is building a snow pal!" : rain ? "Froggy is out exploring the rain!" : sunny ? "Froggy is enjoying the sunshine!" : windy ? "Froggy is watching the breezy sky!" : "Froggy is watching the clouds!";
+  const cloudy = code === 2 || code === 3 || code === 45 || code === 48;
+  const action = rain ? "Froggy is checking the laundry in the rain." : snow ? "Froggy is enjoying a snowy day." : sunny ? "Froggy is soaking up the sunshine." : "Froggy is watching the changing sky.";
   useEffect(() => {
     if (reduced) { bob.set(0); drift.set(0); return; }
-    bob.set(withRepeat(withTiming(-5,{duration:950}),-1,true));
-    drift.set(withRepeat(withTiming(7,{duration:2600}),-1,true));
+    bob.set(withRepeat(withTiming(-4,{duration:1100}),-1,true));
+    drift.set(withRepeat(withTiming(6,{duration:2800}),-1,true));
     return () => { cancelAnimation(bob); cancelAnimation(drift); };
   },[reduced,bob,drift]);
   const frogStyle = useAnimatedStyle(() => ({transform:[{translateY:bob.get()}]}));
   const cloudStyle = useAnimatedStyle(() => ({transform:[{translateX:drift.get()}]}));
   return <View style={styles.weatherScene}>
     <View style={styles.sceneSky}/>
-    <Animated.Text style={[styles.sceneCloud,cloudStyle]}>{sunny ? "☁️" : snow ? "☁️" : "🌧️"}</Animated.Text>
-    {sunny ? <Text style={styles.sceneSun}>☀️</Text> : null}
-    {rain ? <Text style={styles.sceneWeather}>☔</Text> : null}
-    {snow ? <Text style={styles.sceneWeather}>❄️</Text> : null}
-    {windy ? <Text style={styles.sceneWeather}>🍃</Text> : null}
-    <View style={styles.sceneHills}/>
-    <Text style={styles.sceneMushroom}>🍄</Text>
-    <Text style={styles.sceneTree}>🌳</Text>
-    <Animated.View style={[styles.sceneFrog,frogStyle]}>
-      <Text style={styles.sceneFrogEmoji}>🐸</Text>
-      <Text style={styles.sceneProp}>{snow ? "🧣" : rain ? "☂️" : sunny ? "🕶️" : "🪁"}</Text>
+    <View style={styles.sceneSunDisc}/>
+    <Animated.View style={[styles.vectorCloud,cloudStyle]}>
+      <View style={styles.cloudPuffLarge}/><View style={styles.cloudPuffSmall}/><View style={styles.cloudBase}/>
+    </Animated.View>
+    {rain ? <View style={styles.rainDrops}>
+      {[0,1,2,3,4].map((n)=><View key={n} style={[styles.rainDrop,{left:18+n*29,top:n%2?68:58}]}/>)}
+    </View> : null}
+    {snow ? <Text style={styles.sceneSnow}>✳   ✳   ✳</Text> : null}
+    <View style={styles.sceneHillBack}/>
+    <View style={styles.sceneHillFront}/>
+    {rain ? <View style={styles.laundry}>
+      <View style={styles.laundryLine}/>
+      <View style={[styles.laundryPeg,{left:38}]}/>
+      <View style={[styles.laundryPeg,{left:91}]}/>
+      <View style={[styles.laundryPeg,{left:143}]}/>
+      <View style={[styles.laundryShirt,{left:29,backgroundColor:"#F4A7A7"}]}/>
+      <View style={[styles.laundryShirt,{left:82,backgroundColor:"#F4D27B"}]}/>
+      <View style={[styles.laundryShirt,{left:135,backgroundColor:"#A9D9D1"}]}/>
+    </View> : <View style={styles.mushroomHouse}>
+      <View style={styles.mushroomCap}/><View style={styles.mushroomStem}/>
+      <View style={styles.mushroomDoor}/>
+    </View>}
+    <Animated.View style={[styles.flatFrog,frogStyle]}>
+      <View style={styles.frogEyes}><View style={styles.frogEye}><View style={styles.frogPupil}/></View><View style={styles.frogEye}><View style={styles.frogPupil}/></View></View>
+      <View style={styles.frogFace}><View style={styles.frogCheek}/><View style={styles.frogMouth}/><View style={styles.frogCheek}/></View>
+      {rain ? <View style={styles.frogUmbrella}><View style={styles.umbrellaCanopy}/><View style={styles.umbrellaHandle}/></View> : sunny ? <View style={styles.frogSunglasses}><View/><View/></View> : null}
     </Animated.View>
     <View style={styles.sceneGround}/>
     <View style={styles.sceneCaption}><Text style={styles.sceneCaptionText}>{action}</Text></View>
@@ -641,20 +656,40 @@ const styles = StyleSheet.create({
   state:{minHeight:180,backgroundColor:colors.panel,borderRadius:radius.lg,justifyContent:"center",alignItems:"center",padding:spacing.lg,gap:spacing.sm},
   muted:{color:colors.muted,fontSize:12,lineHeight:19},weatherIcon:{fontSize:38},cardTitle:{color:colors.text,fontSize:18,fontWeight:"800"},
   retry:{backgroundColor:colors.accent,borderRadius:radius.md,paddingHorizontal:spacing.lg,paddingVertical:spacing.sm,marginTop:spacing.sm},
-  weatherScene:{height:164,borderRadius:20,overflow:"hidden",backgroundColor:"#77B8E8",marginBottom:16,position:"relative"},
-  sceneSky:{...StyleSheet.absoluteFillObject,backgroundColor:"#82C7ED"},
-  sceneCloud:{position:"absolute",top:13,left:22,fontSize:48},
-  sceneSun:{position:"absolute",top:12,right:24,fontSize:39},
-  sceneWeather:{position:"absolute",top:61,right:40,fontSize:28},
-  sceneHills:{position:"absolute",bottom:24,left:-12,right:-12,height:72,backgroundColor:"#78B78A",borderTopLeftRadius:90,borderTopRightRadius:90},
-  sceneMushroom:{position:"absolute",bottom:27,left:22,fontSize:67},
-  sceneTree:{position:"absolute",bottom:25,right:20,fontSize:74},
-  sceneFrog:{position:"absolute",bottom:23,left:"43%",alignItems:"center",zIndex:3},
-  sceneFrogEmoji:{fontSize:68},
-  sceneProp:{position:"absolute",right:-17,top:5,fontSize:25},
-  sceneGround:{position:"absolute",bottom:0,left:0,right:0,height:28,backgroundColor:"#477C67",opacity:0.8},
-  sceneCaption:{position:"absolute",bottom:8,left:10,right:10,alignItems:"center",zIndex:5},
-  sceneCaptionText:{color:"#173A4B",fontSize:11,fontWeight:"900",backgroundColor:"rgba(255,255,255,0.78)",paddingHorizontal:12,paddingVertical:5,borderRadius:20,overflow:"hidden"},
+  weatherScene:{height:178,borderRadius:22,overflow:"hidden",backgroundColor:"#9ED5E8",marginBottom:16,position:"relative"},
+  sceneSky:{...StyleSheet.absoluteFillObject,backgroundColor:"#A9DCEB"},
+  sceneSunDisc:{position:"absolute",top:19,right:30,width:36,height:36,borderRadius:18,backgroundColor:"#FFD36E",opacity:.95},
+  vectorCloud:{position:"absolute",top:20,left:30,width:92,height:48,zIndex:2},
+  cloudPuffLarge:{position:"absolute",left:23,top:0,width:43,height:38,borderRadius:24,backgroundColor:"#F8FCFF"},
+  cloudPuffSmall:{position:"absolute",left:4,top:14,width:38,height:28,borderRadius:20,backgroundColor:"#F8FCFF"},
+  cloudBase:{position:"absolute",left:0,bottom:0,width:88,height:22,borderRadius:14,backgroundColor:"#F8FCFF"},
+  rainDrops:{position:"absolute",left:26,top:56,width:170,height:65,zIndex:2},
+  rainDrop:{position:"absolute",width:5,height:13,borderRadius:5,backgroundColor:"#54B9D5",transform:[{rotate:"18deg"}]},
+  sceneSnow:{position:"absolute",top:74,right:22,color:"#FFFFFF",fontSize:18},
+  sceneHillBack:{position:"absolute",bottom:25,left:-18,right:-18,height:76,backgroundColor:"#8CC69A",borderTopLeftRadius:100,borderTopRightRadius:100},
+  sceneHillFront:{position:"absolute",bottom:0,left:-18,right:-18,height:48,backgroundColor:"#6EAD83",borderTopLeftRadius:100,borderTopRightRadius:100},
+  laundry:{position:"absolute",right:18,top:23,width:190,height:85,zIndex:3},
+  laundryLine:{position:"absolute",top:23,left:10,right:0,height:2,backgroundColor:"#617F8C",transform:[{rotate:"-8deg"}]},
+  laundryPeg:{position:"absolute",top:17,width:3,height:11,backgroundColor:"#D9B978",borderRadius:2},
+  laundryShirt:{position:"absolute",top:28,width:31,height:40,borderBottomLeftRadius:8,borderBottomRightRadius:8,borderTopLeftRadius:5,borderTopRightRadius:5},
+  mushroomHouse:{position:"absolute",left:25,bottom:27,width:64,height:72,alignItems:"center",zIndex:3},
+  mushroomCap:{position:"absolute",top:0,width:64,height:36,borderTopLeftRadius:38,borderTopRightRadius:38,borderBottomLeftRadius:15,borderBottomRightRadius:15,backgroundColor:"#D96E69"},
+  mushroomStem:{position:"absolute",top:30,width:28,height:40,borderRadius:12,backgroundColor:"#F2DDB2"},
+  mushroomDoor:{position:"absolute",top:43,width:12,height:22,borderTopLeftRadius:8,borderTopRightRadius:8,backgroundColor:"#A87962"},
+  flatFrog:{position:"absolute",left:"43%",bottom:23,width:78,height:75,alignItems:"center",zIndex:4},
+  frogEyes:{position:"absolute",top:0,left:12,right:12,flexDirection:"row",justifyContent:"space-between",zIndex:2},
+  frogEye:{width:23,height:25,borderRadius:14,backgroundColor:"#F8F4D9",borderWidth:2,borderColor:"#4C8E68",alignItems:"center",justifyContent:"center"},
+  frogPupil:{width:10,height:13,borderRadius:7,backgroundColor:"#243D39"},
+  frogFace:{position:"absolute",top:20,left:2,right:2,height:45,borderRadius:25,backgroundColor:"#6EBB7C",borderWidth:2,borderColor:"#4C9667",flexDirection:"row",alignItems:"center",justifyContent:"space-around",paddingHorizontal:7},
+  frogCheek:{width:9,height:6,borderRadius:6,backgroundColor:"#E99591"},
+  frogMouth:{width:24,height:9,borderBottomWidth:2,borderColor:"#285B48",borderRadius:12,marginTop:3},
+  frogUmbrella:{position:"absolute",top:-19,right:-5,width:40,height:45,alignItems:"center"},
+  umbrellaCanopy:{width:38,height:20,backgroundColor:"#E7A0A0",borderTopLeftRadius:25,borderTopRightRadius:25,borderBottomLeftRadius:8,borderBottomRightRadius:8},
+  umbrellaHandle:{width:2,height:22,backgroundColor:"#826A57"},
+  frogSunglasses:{position:"absolute",top:7,left:15,right:15,flexDirection:"row",justifyContent:"space-between",gap:3},
+  sceneGround:{position:"absolute",bottom:0,left:0,right:0,height:23,backgroundColor:"#5B9975",opacity:0.9},
+  sceneCaption:{position:"absolute",bottom:7,left:10,right:10,alignItems:"center",zIndex:5},
+  sceneCaptionText:{color:"#244B4A",fontSize:10,fontWeight:"800",backgroundColor:"rgba(255,255,255,0.88)",paddingHorizontal:12,paddingVertical:5,borderRadius:20,overflow:"hidden"},
   hero:{backgroundColor:"#182747",borderRadius:24,borderWidth:1,borderColor:"#303F66",padding:spacing.md,shadowColor:"#050A18",shadowOpacity:0.16,shadowRadius:12,shadowOffset:{width:0,height:5},elevation:3},
   place:{color:colors.text,fontSize:16,fontWeight:"800"},favorite:{borderWidth:1,borderColor:colors.border,borderRadius:radius.full,paddingHorizontal:10,paddingVertical:7},favoriteText:{color:colors.accent,fontSize:11,fontWeight:"800"},
   heroIcon:{fontSize:48},heroIconMotion:{width:94,height:94,alignItems:"center",justifyContent:"center",borderRadius:30,backgroundColor:"#26365E",borderWidth:1,borderColor:"#536394",shadowColor:"#A8F0E0",shadowOpacity:0.16,shadowRadius:14,shadowOffset:{width:0,height:5},elevation:4},temperature:{color:colors.accent,fontSize:76,fontWeight:"200",letterSpacing:-4,marginTop:12},
