@@ -249,6 +249,9 @@ export default function App() {
   const foundHourIndex = hourly?.time?.findIndex((time) => time >= current?.time) ?? 0;
   const hourlyStart = Math.max(0, foundHourIndex);
   const condition = current ? describe(current.weather_code) : null;
+  const localHour = current?.time ? Number(current.time.split("T")[1]?.slice(0,2)) : 12;
+  const isRainMode = current && ((current.weather_code >= 51 && current.weather_code <= 67) || (current.weather_code >= 80 && current.weather_code <= 82) || current.weather_code >= 95);
+  const weatherMode = isRainMode ? "rain" : (localHour >= 19 || localHour < 6) ? "night" : current?.weather_code <= 1 ? "sunny" : "everyday";
   const briefing = useMemo(() => {
     if (!current || !daily || !place) return "";
     const rain = daily.precipitation_probability_max?.[0] ?? 0;
@@ -310,7 +313,7 @@ export default function App() {
         {error ? <Text style={styles.inlineError}>{error}</Text> : null}
 {page === "home" ? <>
         <View style={styles.hero}>
-          <CatWeatherScene code={current.weather_code} windSpeed={current.wind_speed_10m}/>
+          <WeatherModeScene mode={weatherMode} code={current.weather_code} windSpeed={current.wind_speed_10m} temperature={temp(current.temperature_2m)} feelsLike={temp(current.apparent_temperature)} condition={condition[0]} time={current.time} place={place?.name}/>
           <View style={styles.top}>
             <View style={{flex:1}}><Text style={styles.place}>{place?.name}{place?.admin1 ? ", " + place.admin1 : ""}</Text><Text style={styles.muted}>{place?.country}</Text></View>
             <Pressable accessibilityRole="button" accessibilityLabel={isFavorite ? "Remove saved city" : "Save city"} onPress={toggleFavorite} style={styles.favorite}><Text style={styles.favoriteText}>{isFavorite ? "★ Saved" : "☆ Save city"}</Text></Pressable>
@@ -526,6 +529,61 @@ export default function App() {
   </View>;
 }
 
+function WeatherModeScene({mode,code,windSpeed=0,temperature,feelsLike,condition,time,place}) {
+  const reduced = useReducedMotion();
+  const float = useSharedValue(0);
+  const pulse = useSharedValue(0);
+  const rain = mode === "rain";
+  const night = mode === "night";
+  const sunny = mode === "sunny";
+  const palette = night
+    ? {sky:"#2B2140",ground:"#51436A",accent:"#E9A25B",text:"#FFFFFF"}
+    : rain
+      ? {sky:"#2F4B69",ground:"#40607F",accent:"#D6E8FF",text:"#FFFFFF"}
+      : sunny
+        ? {sky:"#FFE9B8",ground:"#9ADBB0",accent:"#E9A25B",text:"#1D2B3A"}
+        : {sky:"#1B2747",ground:"#31456F",accent:"#FFC46B",text:"#FFFFFF"};
+  const headline = night ? "A quieter kind of night" : rain ? "A little rain in the forecast" : sunny ? "Make room for sunshine" : "Your everyday weather";
+  const subtitle = night ? "The day is winding down." : rain ? "Keep an umbrella close today." : sunny ? "Bright skies are on the way." : "A fresh look at the day ahead.";
+  useEffect(() => {
+    if (reduced) { float.set(0); pulse.set(0); return; }
+    float.set(withRepeat(withTiming(-7,{duration:2300}),-1,true));
+    pulse.set(withRepeat(withTiming(1,{duration:1500}),-1,true));
+    return () => { cancelAnimation(float); cancelAnimation(pulse); };
+  },[reduced,float,pulse,mode]);
+  const floatStyle = useAnimatedStyle(() => ({transform:[{translateY:float.get()}]}));
+  const glowStyle = useAnimatedStyle(() => ({opacity:0.35+pulse.get()*0.2,transform:[{scale:0.92+pulse.get()*0.12}]}));
+  const symbol = rain ? "🌧️" : night ? "🌙" : sunny ? "☀️" : "⛅";
+  return <View style={[styles.modeScene,{backgroundColor:palette.sky}]}>
+    <View style={[styles.modeGlow,{backgroundColor:palette.accent}]}/>
+    <View style={styles.modeTopline}>
+      <View><Text style={[styles.modeEyebrow,{color:palette.accent}]}>{mode.toUpperCase()} MODE</Text><Text style={[styles.modePlace,{color:palette.text}]}>{place || "Your location"}</Text></View>
+      <Text style={[styles.modeTime,{color:palette.text}]}>{time?.split("T")?.[1]?.slice(0,5) || "LOCAL TIME"}</Text>
+    </View>
+    <Animated.View style={[styles.modeWeatherArt,floatStyle]}>
+      <Animated.View style={[styles.modeHalo,{backgroundColor:palette.accent},glowStyle]}/>
+      <Text style={styles.modeWeatherIcon}>{symbol}</Text>
+      {rain ? <Text style={styles.modeRainMarks}>╱   ╱   ╱   ╱   ╱</Text> : null}
+      {night ? <Text style={styles.modeStars}>✦       ✧       ·       ✦</Text> : null}
+      {sunny ? <Text style={styles.modeSunRays}>✦       ✧       ✦</Text> : null}
+    </Animated.View>
+    <View style={[styles.modeHorizon,{backgroundColor:palette.ground}]}/>
+    <View style={styles.modeBottom}>
+      <View style={{flex:1}}>
+        <Text style={[styles.modeTemperature,{color:palette.text}]}>{temperature || "—"}</Text>
+        <Text style={[styles.modeCondition,{color:palette.text}]}>{condition || "Weather update"}</Text>
+        <Text style={[styles.modeSubtitle,{color:palette.text}]}>{subtitle}</Text>
+      </View>
+      <View style={styles.modeFeels}>
+        <Text style={[styles.modeFeelsLabel,{color:palette.accent}]}>FEELS LIKE</Text>
+        <Text style={[styles.modeFeelsValue,{color:palette.text}]}>{feelsLike || "—"}</Text>
+        <Text style={[styles.modeWind,{color:palette.text}]}>↝ {number(windSpeed," km/h")} wind</Text>
+      </View>
+    </View>
+    <Text style={[styles.modeCaption,{color:palette.text}]}>{headline}</Text>
+  </View>;
+}
+
 function WeatherScene({code,windSpeed=0}) {
   const reduced = useReducedMotion();
   const bob = useSharedValue(0);
@@ -701,6 +759,28 @@ function SkyBuddy() {
 function Metric({label,value}) { return <View style={styles.metric}><Text style={styles.metricLabel}>{label}</Text><Text style={styles.metricValue}>{value}</Text></View>; }
 
 const styles = StyleSheet.create({
+  modeScene:{height:286,borderRadius:22,overflow:"hidden",position:"relative",marginBottom:16,padding:16,justifyContent:"space-between"},
+  modeGlow:{position:"absolute",top:72,right:36,width:124,height:124,borderRadius:70,opacity:0.12},
+  modeTopline:{flexDirection:"row",justifyContent:"space-between",alignItems:"flex-start",zIndex:2},
+  modeEyebrow:{fontSize:9,fontWeight:"900",letterSpacing:2},
+  modePlace:{fontSize:17,fontWeight:"800",marginTop:5},
+  modeTime:{fontSize:11,fontWeight:"700",marginTop:3,opacity:0.8},
+  modeWeatherArt:{position:"absolute",top:66,right:34,width:150,height:110,alignItems:"center",justifyContent:"center",zIndex:2},
+  modeHalo:{position:"absolute",width:100,height:100,borderRadius:60,opacity:0.4},
+  modeWeatherIcon:{fontSize:70,textAlign:"center"},
+  modeRainMarks:{position:"absolute",top:83,color:"#D6E8FF",fontSize:14,letterSpacing:3},
+  modeStars:{position:"absolute",top:2,left:-18,right:-18,color:"#FFE5B5",fontSize:15,textAlign:"center"},
+  modeSunRays:{position:"absolute",top:0,left:-12,right:-12,color:"#E9A25B",fontSize:15,textAlign:"center"},
+  modeHorizon:{position:"absolute",left:-30,right:-30,bottom:70,height:70,borderTopLeftRadius:100,borderTopRightRadius:100,opacity:0.5},
+  modeBottom:{flexDirection:"row",alignItems:"flex-end",justifyContent:"space-between",zIndex:3,marginTop:"auto"},
+  modeTemperature:{fontSize:49,fontWeight:"300",letterSpacing:-2},
+  modeCondition:{fontSize:14,fontWeight:"800",marginTop:-3},
+  modeSubtitle:{fontSize:10,opacity:0.82,marginTop:5},
+  modeFeels:{alignItems:"flex-end",paddingBottom:5,gap:4},
+  modeFeelsLabel:{fontSize:8,fontWeight:"900",letterSpacing:1.2},
+  modeFeelsValue:{fontSize:17,fontWeight:"800"},
+  modeWind:{fontSize:9,opacity:0.85},
+  modeCaption:{fontSize:10,fontWeight:"800",opacity:0.8,zIndex:3,marginTop:6},
   catScene:{height:224,borderRadius:20,overflow:"hidden",position:"relative",marginBottom:16,borderWidth:1,borderColor:"#D8C8AE"},
   catMoon:{position:"absolute",top:18,right:35,width:27,height:27,borderRadius:14,backgroundColor:"#F8E8C4",opacity:.9},
   catStars:{position:"absolute",top:14,left:25,right:90,flexDirection:"row",justifyContent:"space-between"},
