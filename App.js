@@ -261,7 +261,7 @@ export default function App() {
     <StatusBar barStyle="light-content" backgroundColor={colors.background}/>
     <ScrollView contentInsetAdjustmentBehavior="automatic" keyboardShouldPersistTaps="handled" contentContainerStyle={styles.content}>
       <View style={styles.top}>
-        <View><Text style={styles.brand}>SKYCAST</Text><Text style={styles.eyebrow}>YOUR WEATHER COMPANION</Text></View>
+        <View><Text style={styles.brand}>CLASSIC CLOUD CO.</Text><Text style={styles.eyebrow}>A LITTLE WEATHER, A LOT OF WONDER</Text></View>
         <Text style={styles.live}>● LIVE DATA</Text>
       </View>
       <View style={styles.pageNav}>
@@ -274,8 +274,8 @@ export default function App() {
       </View>
       {page !== "home" ? <Text style={styles.pageHeading}>{({story:"Weather Story",rain:"Rain & Air Quality",sun:"Sun & Sky",travel:"Travel Planner",dashboard:"Personal Dashboard",more:"More tools"})[page]}</Text> : null}
 {page === "home" ? <>
-      <Text style={styles.heading}>Your sky, right now.</Text>
-      <Text style={styles.subheading}>A little sunshine for your day.</Text>
+      <Text style={styles.heading}>A little note from the sky.</Text>
+      <Text style={styles.subheading}>Your daily forecast, with a touch of nostalgia.</Text>
       <View style={styles.searchRow}>
         <TextInput accessibilityLabel="Search city" value={query} onChangeText={setQuery} onSubmitEditing={() => loadCity(query)} returnKeyType="search" placeholder="Search any city" placeholderTextColor={colors.muted} style={styles.input}/>
         <Pressable accessibilityRole="button" onPress={() => loadCity(query)} style={styles.button}><Text style={styles.buttonText}>Search</Text></Pressable>
@@ -288,8 +288,8 @@ export default function App() {
       </View> : null}
 
 </> : null}
-      {loading ? <View style={styles.state}><ActivityIndicator size="large" color={colors.accent}/><Text style={styles.muted}>Getting your forecast…</Text></View>
-      : error && !current ? <View style={styles.state}><Text style={styles.weatherIcon}>☁️</Text><Text style={styles.cardTitle}>Weather unavailable</Text><Text style={styles.muted}>{error}</Text><Pressable onPress={() => loadCity(query)} style={styles.retry}><Text style={styles.buttonText}>Try again</Text></Pressable></View>
+      {loading ? <View style={styles.state}><ActivityIndicator size="large" color={colors.accent}/><Text style={styles.muted}>Consulting the weather bureau…</Text></View>
+      : error && !current ? <View style={styles.state}><Text style={styles.weatherIcon}>☁️</Text><Text style={styles.cardTitle}>Forecast temporarily unavailable</Text><Text style={styles.muted}>{error}</Text><Pressable onPress={() => loadCity(query)} style={styles.retry}><Text style={styles.buttonText}>Try again</Text></Pressable></View>
       : current && daily ? <>
         {error ? <Text style={styles.inlineError}>{error}</Text> : null}
 {page === "home" ? <>
@@ -504,7 +504,7 @@ export default function App() {
         <Text style={styles.muted}>More tools use the same live forecast. Some map details open in your browser.</Text>
       </View> : null}
       <Text style={styles.footer}>{offlineCopy ? "Offline mode · Showing your last saved forecast. Reconnect to refresh live data. " : ""}Weather and air-quality data by Open-Meteo. Forecasts are estimates and can change.</Text>
-      <Pressable onPress={() => loadCity(place?.name || query)} style={styles.refresh}><Text style={styles.refreshText}>↻  Refresh forecast</Text></Pressable>
+      <Pressable onPress={() => loadCity(place?.name || query)} style={styles.refresh}><Text style={styles.refreshText}>↻  Refresh the forecast</Text></Pressable>
       </> : null}
     </ScrollView>
   </View>;
@@ -618,46 +618,46 @@ function Metric({label,value}) { return <View style={styles.metric}><Text style=
 const styles = StyleSheet.create({
   screen:{flex:1,backgroundColor:colors.background},content:{padding:spacing.lg,paddingTop:48,paddingBottom:64,gap:spacing.md},
   pageNav:{flexDirection:"row",flexWrap:"wrap",gap:9,paddingVertical:10},
-  pageNavButton:{paddingHorizontal:15,paddingVertical:10,borderRadius:radius.full,borderWidth:1,borderColor:"#354267",backgroundColor:"#171F3D"},
-  pageNavButtonActive:{backgroundColor:"#A8F0E0",borderColor:"#A8F0E0"},
+  pageNavButton:{paddingHorizontal:15,paddingVertical:10,borderRadius:radius.full,borderWidth:1,borderColor:"#D8C8AE",backgroundColor:"#FFF9EF"},
+  pageNavButtonActive:{backgroundColor:"#B66A45",borderColor:"#B66A45"},
   pageNavText:{color:colors.text,fontSize:12,fontWeight:"800"},
   pageNavTextActive:{color:colors.background},
   pageHeading:{color:colors.text,fontSize:26,fontWeight:"900",letterSpacing:-0.7,marginTop:spacing.sm,marginBottom:spacing.xs},
-  welcomeSticker:{flexDirection:"row",alignItems:"center",gap:12,backgroundColor:"#202C50",borderWidth:1,borderColor:"#40517D",borderRadius:22,padding:14,marginTop:spacing.sm},
+  welcomeSticker:{flexDirection:"row",alignItems:"center",gap:12,backgroundColor:"#F0E4D1",borderWidth:1,borderColor:"#D8C8AE",borderRadius:22,padding:14,marginTop:spacing.sm},
   welcomeEmoji:{fontSize:30},
   buddyWrap:{width:64,height:54,alignItems:"center",justifyContent:"center",marginRight:2},
-  buddyCloud:{width:48,height:36,borderRadius:22,backgroundColor:"#FFE7A8",alignItems:"center",justifyContent:"center",borderWidth:1.5,borderColor:"#FFF4D8",shadowColor:"#FFD98A",shadowOpacity:0.3,shadowRadius:8,shadowOffset:{width:0,height:3},elevation:3},
-  buddyBase:{position:"absolute",bottom:7,width:32,height:9,borderRadius:8,backgroundColor:"#FFE7A8"},
+  buddyCloud:{width:48,height:36,borderRadius:22,backgroundColor:"#E8C98F",alignItems:"center",justifyContent:"center",borderWidth:1.5,borderColor:"#FFF6E8",shadowColor:"#C58A52",shadowOpacity:0.3,shadowRadius:8,shadowOffset:{width:0,height:3},elevation:3},
+  buddyBase:{position:"absolute",bottom:7,width:32,height:9,borderRadius:8,backgroundColor:"#E8C98F"},
   buddyEyes:{flexDirection:"row",gap:10,marginTop:3},
-  buddyEye:{width:4,height:6,borderRadius:4,backgroundColor:"#394267"},
-  buddySmile:{width:9,height:5,borderBottomWidth:1.8,borderColor:"#394267",borderRadius:8,marginTop:1},
+  buddyEye:{width:4,height:6,borderRadius:4,backgroundColor:"#39434A"},
+  buddySmile:{width:9,height:5,borderBottomWidth:1.8,borderColor:"#39434A",borderRadius:8,marginTop:1},
   buddyCheekLeft:{position:"absolute",left:8,top:21,width:6,height:3,borderRadius:4,backgroundColor:"#F5A6A6"},
   buddyCheekRight:{position:"absolute",right:8,top:21,width:6,height:3,borderRadius:4,backgroundColor:"#F5A6A6"},
-  buddySparkle:{position:"absolute",color:"#FFE39A",fontSize:16,fontWeight:"900",zIndex:2},
+  buddySparkle:{position:"absolute",color:"#C58A52",fontSize:16,fontWeight:"900",zIndex:2},
   buddySparkleLeft:{left:2,top:0},
   buddySparkleRight:{right:1,top:8},
-  welcomeTitle:{color:"#F8F6FF",fontSize:14,fontWeight:"900"},
-  welcomeCopy:{color:"#B8C3E0",fontSize:11,lineHeight:16,marginTop:3},
-  welcomeStar:{color:"#FFD98A",fontSize:23},
+  welcomeTitle:{color:"#293B4A",fontSize:14,fontWeight:"900"},
+  welcomeCopy:{color:"#78858A",fontSize:11,lineHeight:16,marginTop:3},
+  welcomeStar:{color:"#C58A52",fontSize:23},
   mascotSparkleOne:{position:"absolute",top:7,left:10},
   mascotSparkleTwo:{position:"absolute",right:9,top:17},
-  mascotSparkle:{color:"#FFE39A",fontSize:17,fontWeight:"900"},
-  mascotFace:{position:"absolute",bottom:9,left:34,flexDirection:"row",alignItems:"center",gap:5,backgroundColor:"#FFF4D8",borderRadius:12,paddingHorizontal:6,paddingVertical:1},
-  mascotEye:{width:4,height:4,borderRadius:2,backgroundColor:"#394267"},
-  mascotSmile:{fontSize:10,color:"#394267",fontWeight:"900",marginTop:-3},
+  mascotSparkle:{color:"#C58A52",fontSize:17,fontWeight:"900"},
+  mascotFace:{position:"absolute",bottom:9,left:34,flexDirection:"row",alignItems:"center",gap:5,backgroundColor:"#FFF6E8",borderRadius:12,paddingHorizontal:6,paddingVertical:1},
+  mascotEye:{width:4,height:4,borderRadius:2,backgroundColor:"#39434A"},
+  mascotSmile:{fontSize:10,color:"#39434A",fontWeight:"900",marginTop:-3},
   toolButton:{backgroundColor:colors.panel,borderWidth:1,borderColor:colors.border,borderRadius:radius.lg,padding:spacing.lg,gap:6},
   toolButtonTitle:{color:colors.text,fontSize:15,fontWeight:"800"},
   toolButtonHint:{color:colors.muted,fontSize:11,lineHeight:16},
-  top:{flexDirection:"row",justifyContent:"space-between",alignItems:"center",gap:8},brand:{color:colors.text,fontSize:23,fontWeight:"900",letterSpacing:4},
-  eyebrow:{color:colors.muted,fontSize:9,letterSpacing:1.5,marginTop:4},live:{color:colors.accent,fontSize:9,fontWeight:"800",letterSpacing:1},
+  top:{flexDirection:"row",justifyContent:"space-between",alignItems:"center",gap:8},brand:{color:colors.text,fontSize:20,fontWeight:"900",letterSpacing:2.2,fontFamily:"serif"},
+  eyebrow:{color:colors.muted,fontSize:9,letterSpacing:1.2,marginTop:4},live:{color:colors.accent,fontSize:9,fontWeight:"800",letterSpacing:1},
   heading:{color:colors.text,fontSize:27,fontWeight:"900",letterSpacing:-0.6,marginTop:spacing.sm},subheading:{color:colors.muted,fontSize:14,marginTop:-5,lineHeight:21},
   searchRow:{flexDirection:"row",gap:spacing.sm,marginTop:spacing.sm},input:{flex:1,minHeight:48,borderRadius:radius.md,paddingHorizontal:spacing.md,color:colors.text,backgroundColor:colors.panel,borderWidth:1,borderColor:colors.border,fontSize:15},
   button:{backgroundColor:colors.accent,borderRadius:radius.md,justifyContent:"center",paddingHorizontal:spacing.lg},buttonText:{color:colors.background,fontWeight:"800"},
   state:{minHeight:180,backgroundColor:colors.panel,borderRadius:radius.lg,justifyContent:"center",alignItems:"center",padding:spacing.lg,gap:spacing.sm},
   muted:{color:colors.muted,fontSize:12,lineHeight:19},weatherIcon:{fontSize:38},cardTitle:{color:colors.text,fontSize:18,fontWeight:"800"},
   retry:{backgroundColor:colors.accent,borderRadius:radius.md,paddingHorizontal:spacing.lg,paddingVertical:spacing.sm,marginTop:spacing.sm},
-  weatherScene:{height:178,borderRadius:22,overflow:"hidden",backgroundColor:"#9ED5E8",marginBottom:16,position:"relative"},
-  sceneSky:{...StyleSheet.absoluteFillObject,backgroundColor:"#A9DCEB"},
+  weatherScene:{height:178,borderRadius:18,overflow:"hidden",backgroundColor:"#D8E5E2",marginBottom:16,position:"relative",borderWidth:1,borderColor:"#D8C8AE"},
+  sceneSky:{...StyleSheet.absoluteFillObject,backgroundColor:"#DCE9E5"},
   sceneSunDisc:{position:"absolute",top:19,right:30,width:36,height:36,borderRadius:18,backgroundColor:"#FFD36E",opacity:.95},
   vectorCloud:{position:"absolute",top:20,left:30,width:92,height:48,zIndex:2},
   cloudPuffLarge:{position:"absolute",left:23,top:0,width:43,height:38,borderRadius:24,backgroundColor:"#F8FCFF"},
@@ -690,17 +690,17 @@ const styles = StyleSheet.create({
   sceneGround:{position:"absolute",bottom:0,left:0,right:0,height:23,backgroundColor:"#5B9975",opacity:0.9},
   sceneCaption:{position:"absolute",bottom:7,left:10,right:10,alignItems:"center",zIndex:5},
   sceneCaptionText:{color:"#244B4A",fontSize:10,fontWeight:"800",backgroundColor:"rgba(255,255,255,0.88)",paddingHorizontal:12,paddingVertical:5,borderRadius:20,overflow:"hidden"},
-  hero:{backgroundColor:"#182747",borderRadius:24,borderWidth:1,borderColor:"#303F66",padding:spacing.md,shadowColor:"#050A18",shadowOpacity:0.16,shadowRadius:12,shadowOffset:{width:0,height:5},elevation:3},
+  hero:{backgroundColor:"#FFF9EF",borderRadius:24,borderWidth:1,borderColor:"#D8C8AE",padding:spacing.md,shadowColor:"#7D6B57",shadowOpacity:0.16,shadowRadius:12,shadowOffset:{width:0,height:5},elevation:3},
   place:{color:colors.text,fontSize:16,fontWeight:"800"},favorite:{borderWidth:1,borderColor:colors.border,borderRadius:radius.full,paddingHorizontal:10,paddingVertical:7},favoriteText:{color:colors.accent,fontSize:11,fontWeight:"800"},
-  heroIcon:{fontSize:48},heroIconMotion:{width:94,height:94,alignItems:"center",justifyContent:"center",borderRadius:30,backgroundColor:"#26365E",borderWidth:1,borderColor:"#536394",shadowColor:"#A8F0E0",shadowOpacity:0.16,shadowRadius:14,shadowOffset:{width:0,height:5},elevation:4},temperature:{color:colors.accent,fontSize:76,fontWeight:"200",letterSpacing:-4,marginTop:12},
+  heroIcon:{fontSize:48},heroIconMotion:{width:94,height:94,alignItems:"center",justifyContent:"center",borderRadius:30,backgroundColor:"#E6D8C3",borderWidth:1,borderColor:"#C7B394",shadowColor:"#B66A45",shadowOpacity:0.16,shadowRadius:14,shadowOffset:{width:0,height:5},elevation:4},temperature:{color:colors.accent,fontSize:76,fontWeight:"200",letterSpacing:-4,marginTop:12},
   condition:{color:colors.text,fontSize:17,fontWeight:"700",marginTop:-4},metrics:{flexDirection:"row",borderTopWidth:1,borderTopColor:colors.border,marginTop:spacing.lg,paddingTop:spacing.md,justifyContent:"space-between",gap:8},
   metric:{gap:5,flex:1},metricLabel:{color:colors.muted,fontSize:9,letterSpacing:1,fontWeight:"800"},metricValue:{color:colors.text,fontSize:13,fontWeight:"700"},
   timestamp:{color:colors.muted,fontSize:10,marginTop:spacing.md,lineHeight:15},mapLink:{marginTop:spacing.md,alignSelf:"flex-start"},mapLinkText:{color:colors.accent,fontWeight:"800",fontSize:12},
   section:{gap:spacing.sm,marginTop:spacing.sm},sectionTop:{flexDirection:"row",justifyContent:"space-between",alignItems:"center"},sectionTitle:{color:colors.text,fontSize:18,fontWeight:"900",letterSpacing:-0.25},
-  briefing:{backgroundColor:"#171F3D",borderWidth:1,borderColor:"#303D68",borderRadius:26,padding:spacing.lg,gap:spacing.sm},
+  briefing:{backgroundColor:"#FFF9EF",borderWidth:1,borderColor:"#D8C8AE",borderRadius:26,padding:spacing.lg,gap:spacing.sm},
   briefingKicker:{color:colors.accent,fontSize:9,fontWeight:"900",letterSpacing:2},briefingText:{color:colors.text,fontSize:14,lineHeight:23},briefingFooter:{color:colors.muted,fontSize:10,lineHeight:15},
   environment:{backgroundColor:colors.panel,borderWidth:1,borderColor:colors.border,borderRadius:radius.lg,padding:spacing.md,flexDirection:"row",gap:spacing.sm},
-  alert:{backgroundColor:"#392D1B",borderColor:"#80612C",borderWidth:1,borderRadius:radius.md,padding:spacing.md,gap:5},alertTitle:{color:"#FFD68A",fontWeight:"900",fontSize:13},alertText:{color:"#F8E8C7",fontSize:12,lineHeight:18},
+  alert:{backgroundColor:"#F6E5D2",borderColor:"#D4A66B",borderWidth:1,borderRadius:radius.md,padding:spacing.md,gap:5},alertTitle:{color:"#9A5A38",fontWeight:"900",fontSize:13},alertText:{color:"#5B4A3B",fontSize:12,lineHeight:18},
   hourly:{gap:spacing.sm,paddingVertical:4},hourCard:{minWidth:76,backgroundColor:colors.panel,borderWidth:1,borderColor:colors.border,borderRadius:radius.md,padding:spacing.sm,alignItems:"center",gap:8},
   hourTime:{color:colors.muted,fontSize:10},hourIcon:{fontSize:20},hourTemp:{color:colors.text,fontSize:17,fontWeight:"800"},hourRain:{color:colors.accent,fontSize:10},
   forecast:{backgroundColor:colors.panel,borderRadius:radius.lg,borderWidth:1,borderColor:colors.border,paddingHorizontal:spacing.md},
@@ -711,8 +711,8 @@ const styles = StyleSheet.create({
   compareButton:{backgroundColor:colors.accent,borderRadius:radius.md,minHeight:46,alignItems:"center",justifyContent:"center",padding:spacing.md},disabled:{opacity:.5},
   compareRow:{flexDirection:"row",alignItems:"center",justifyContent:"space-between",backgroundColor:colors.panel,borderRadius:radius.md,padding:spacing.md,gap:8},
   compareCondition:{color:colors.muted,fontSize:10,flex:1},compareTemp:{color:colors.text,fontSize:16,fontWeight:"800"},
-  inlineError:{color:"#FFB4A9",fontSize:12},
-  featureCard:{backgroundColor:"#171F3D",borderWidth:1,borderColor:"#303D68",borderRadius:26,padding:spacing.md,gap:spacing.sm},
+  inlineError:{color:"#A34F42",fontSize:12},
+  featureCard:{backgroundColor:"#FFF9EF",borderWidth:1,borderColor:"#D8C8AE",borderRadius:26,padding:spacing.md,gap:spacing.sm},
   featureHint:{color:colors.muted,fontSize:9,letterSpacing:1,fontWeight:"800"},featureText:{color:colors.text,fontSize:13,fontWeight:"600"},
   rainRow:{flexDirection:"row",alignItems:"center",gap:10},rainTrack:{flex:1,height:7,backgroundColor:colors.border,borderRadius:9,overflow:"hidden"},rainFill:{height:7,backgroundColor:colors.accent,borderRadius:9},rainValue:{color:colors.accent,fontSize:11,fontWeight:"800",width:36,textAlign:"right"},
   sunRow:{flexDirection:"row",justifyContent:"space-around"},sunMetric:{alignItems:"center",gap:5},sunIcon:{fontSize:28},sunValue:{color:colors.text,fontSize:20,fontWeight:"800"},
