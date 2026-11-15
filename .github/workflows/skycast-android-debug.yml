@@ -2,6 +2,16 @@ name: SkyCast standalone Android APK (no Metro, no EAS credentials)
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'App.js'
+      - 'src/**'
+      - 'assets/**'
+      - 'app.json'
+      - 'package.json'
+      - '.github/workflows/skycast-android-debug.yml'
 
 permissions:
   contents: read
