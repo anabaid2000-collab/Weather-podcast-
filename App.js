@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import * as Updates from "expo-updates";
 import { ActivityIndicator, Linking, Pressable, ScrollView, StatusBar, StyleSheet, Text, TextInput, View } from "react-native";
 import Animated, { cancelAnimation, useAnimatedStyle, useReducedMotion, useSharedValue, withRepeat, withTiming } from "react-native-reanimated";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -142,6 +143,24 @@ export default function App() {
       latestWeatherRequest.current += 1;
     };
   }, [loadCity]);
+
+  useEffect(() => {
+    let active = true;
+    const applyAvailableUpdate = async () => {
+      try {
+        if (!Updates.isEnabled) return;
+        const update = await Updates.checkForUpdateAsync();
+        if (!active || !update.isAvailable) return;
+        await Updates.fetchUpdateAsync();
+        if (active) await Updates.reloadAsync();
+      } catch (updateError) {
+        // Keep the current app usable when update checks or downloads fail.
+        console.warn("SkyCast OTA update check failed:", updateError?.message || updateError);
+      }
+    };
+    void applyAvailableUpdate();
+    return () => { active = false; };
+  }, []);
 
   const saveFavorites = async (next) => {
     setFavorites(next);
