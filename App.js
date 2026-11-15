@@ -283,6 +283,7 @@ export default function App() {
         {error ? <Text style={styles.inlineError}>{error}</Text> : null}
 {page === "home" ? <>
         <View style={styles.hero}>
+          <WeatherScene code={current.weather_code}/>
           <View style={styles.top}>
             <View style={{flex:1}}><Text style={styles.place}>{place?.name}{place?.admin1 ? ", " + place.admin1 : ""}</Text><Text style={styles.muted}>{place?.country}</Text></View>
             <Pressable accessibilityRole="button" accessibilityLabel={isFavorite ? "Remove saved city" : "Save city"} onPress={toggleFavorite} style={styles.favorite}><Text style={styles.favoriteText}>{isFavorite ? "★ Saved" : "☆ Save city"}</Text></Pressable>
@@ -499,6 +500,42 @@ export default function App() {
   </View>;
 }
 
+function WeatherScene({code}) {
+  const reduced = useReducedMotion();
+  const bob = useSharedValue(0);
+  const drift = useSharedValue(0);
+  const rain = code >= 51 && code <= 82 || code >= 95;
+  const snow = code >= 71 && code <= 86;
+  const sunny = code <= 1;
+  const windy = code === 45 || code === 48 || code === 3;
+  const action = snow ? "Froggy is building a snow pal!" : rain ? "Froggy is out exploring the rain!" : sunny ? "Froggy is enjoying the sunshine!" : windy ? "Froggy is watching the breezy sky!" : "Froggy is watching the clouds!";
+  useEffect(() => {
+    if (reduced) { bob.set(0); drift.set(0); return; }
+    bob.set(withRepeat(withTiming(-5,{duration:950}),-1,true));
+    drift.set(withRepeat(withTiming(7,{duration:2600}),-1,true));
+    return () => { cancelAnimation(bob); cancelAnimation(drift); };
+  },[reduced,bob,drift]);
+  const frogStyle = useAnimatedStyle(() => ({transform:[{translateY:bob.get()}]}));
+  const cloudStyle = useAnimatedStyle(() => ({transform:[{translateX:drift.get()}]}));
+  return <View style={styles.weatherScene}>
+    <View style={styles.sceneSky}/>
+    <Animated.Text style={[styles.sceneCloud,cloudStyle]}>{sunny ? "☁️" : snow ? "☁️" : "🌧️"}</Animated.Text>
+    {sunny ? <Text style={styles.sceneSun}>☀️</Text> : null}
+    {rain ? <Text style={styles.sceneWeather}>☔</Text> : null}
+    {snow ? <Text style={styles.sceneWeather}>❄️</Text> : null}
+    {windy ? <Text style={styles.sceneWeather}>🍃</Text> : null}
+    <View style={styles.sceneHills}/>
+    <Text style={styles.sceneMushroom}>🍄</Text>
+    <Text style={styles.sceneTree}>🌳</Text>
+    <Animated.View style={[styles.sceneFrog,frogStyle]}>
+      <Text style={styles.sceneFrogEmoji}>🐸</Text>
+      <Text style={styles.sceneProp}>{snow ? "🧣" : rain ? "☂️" : sunny ? "🕶️" : "🪁"}</Text>
+    </Animated.View>
+    <View style={styles.sceneGround}/>
+    <View style={styles.sceneCaption}><Text style={styles.sceneCaptionText}>{action}</Text></View>
+  </View>;
+}
+
 function WeatherMotion({children}) {
   const reducedMotion = useReducedMotion();
   const drift = useSharedValue(0);
@@ -594,6 +631,20 @@ const styles = StyleSheet.create({
   state:{minHeight:180,backgroundColor:colors.panel,borderRadius:radius.lg,justifyContent:"center",alignItems:"center",padding:spacing.lg,gap:spacing.sm},
   muted:{color:colors.muted,fontSize:12,lineHeight:19},weatherIcon:{fontSize:38},cardTitle:{color:colors.text,fontSize:18,fontWeight:"800"},
   retry:{backgroundColor:colors.accent,borderRadius:radius.md,paddingHorizontal:spacing.lg,paddingVertical:spacing.sm,marginTop:spacing.sm},
+  weatherScene:{height:190,borderRadius:23,overflow:"hidden",backgroundColor:"#77B8E8",marginBottom:18,position:"relative"},
+  sceneSky:{...StyleSheet.absoluteFillObject,backgroundColor:"#82C7ED"},
+  sceneCloud:{position:"absolute",top:13,left:22,fontSize:48},
+  sceneSun:{position:"absolute",top:12,right:24,fontSize:39},
+  sceneWeather:{position:"absolute",top:61,right:40,fontSize:28},
+  sceneHills:{position:"absolute",bottom:24,left:-12,right:-12,height:72,backgroundColor:"#78B78A",borderTopLeftRadius:90,borderTopRightRadius:90},
+  sceneMushroom:{position:"absolute",bottom:27,left:22,fontSize:67},
+  sceneTree:{position:"absolute",bottom:25,right:20,fontSize:74},
+  sceneFrog:{position:"absolute",bottom:24,left:"46%",alignItems:"center",zIndex:3},
+  sceneFrogEmoji:{fontSize:61},
+  sceneProp:{position:"absolute",right:-17,top:5,fontSize:25},
+  sceneGround:{position:"absolute",bottom:0,left:0,right:0,height:28,backgroundColor:"#477C67",opacity:0.8},
+  sceneCaption:{position:"absolute",bottom:8,left:10,right:10,alignItems:"center",zIndex:5},
+  sceneCaptionText:{color:"#173A4B",fontSize:11,fontWeight:"900",backgroundColor:"rgba(255,255,255,0.78)",paddingHorizontal:12,paddingVertical:5,borderRadius:20,overflow:"hidden"},
   hero:{backgroundColor:"#182747",borderRadius:30,borderWidth:1,borderColor:"#394C79",padding:spacing.lg,shadowColor:"#050A18",shadowOpacity:0.24,shadowRadius:18,shadowOffset:{width:0,height:9},elevation:5},
   place:{color:colors.text,fontSize:16,fontWeight:"800"},favorite:{borderWidth:1,borderColor:colors.border,borderRadius:radius.full,paddingHorizontal:10,paddingVertical:7},favoriteText:{color:colors.accent,fontSize:11,fontWeight:"800"},
   heroIcon:{fontSize:48},heroIconMotion:{width:94,height:94,alignItems:"center",justifyContent:"center",borderRadius:30,backgroundColor:"#26365E",borderWidth:1,borderColor:"#536394",shadowColor:"#A8F0E0",shadowOpacity:0.16,shadowRadius:14,shadowOffset:{width:0,height:5},elevation:4},temperature:{color:colors.accent,fontSize:76,fontWeight:"200",letterSpacing:-4,marginTop:12},
