@@ -7,6 +7,7 @@ import { auth, db } from "./src/firebase";
 import { doc, getDoc, serverTimestamp, setDoc } from "firebase/firestore";
 import { signInAnonymously } from "firebase/auth";
 import { colors, spacing, radius } from "./src/theme";
+import ForecastFM from "./src/forecast-fm";
 
 const FAVORITES_KEY = "skycast.favoriteCities.v1";
 const weatherCodes = {
@@ -286,12 +287,12 @@ export default function App() {
       <View style={styles.pageNav}>
         {[
           ["home","Home"],["story","Weather Story"],["rain","Rain & Air"],["sun","Sun & Sky"],
-          ["travel","Travel"],["dashboard","Dashboard"],["more","More"]
+          ["travel","Travel"],["forecast","Forecast FM"],["dashboard","Dashboard"],["more","More"]
         ].map(([key,label]) => <Pressable key={key} accessibilityRole="button" accessibilityState={{selected:page===key}} onPress={() => setPage(key)} style={[styles.pageNavButton,page===key&&styles.pageNavButtonActive]}>
           <Text style={[styles.pageNavText,page===key&&styles.pageNavTextActive]}>{label}</Text>
         </Pressable>)}
       </View>
-      {page !== "home" ? <Text style={styles.pageHeading}>{({story:"Weather Story",rain:"Rain & Air Quality",sun:"Sun & Sky",travel:"Travel Planner",dashboard:"Personal Dashboard",more:"More tools"})[page]}</Text> : null}
+      {page !== "home" ? <Text style={styles.pageHeading}>{({story:"Weather Story",rain:"Rain & Air Quality",sun:"Sun & Sky",travel:"Travel Planner",forecast:"Forecast FM",dashboard:"Personal Dashboard",more:"More tools"})[page]}</Text> : null}
 {page === "home" ? <>
       <Text style={styles.heading}>A little note from the sky.</Text>
       <Text style={styles.subheading}>Your daily forecast, with a touch of nostalgia.</Text>
@@ -311,6 +312,7 @@ export default function App() {
       : error && !current ? <View style={styles.state}><Text style={styles.weatherIcon}>☁️</Text><Text style={styles.cardTitle}>Forecast temporarily unavailable</Text><Text style={styles.muted}>{error}</Text><Pressable onPress={() => loadCity(query)} style={styles.retry}><Text style={styles.buttonText}>Try again</Text></Pressable></View>
       : current && daily ? <>
         {error ? <Text style={styles.inlineError}>{error}</Text> : null}
+{page === "forecast" ? <ForecastFM place={place} forecast={data.forecast} unit={unit}/> : null}
 {page === "home" ? <>
         <View style={styles.hero}>
           <WeatherModeScene mode={weatherMode} code={current.weather_code} windSpeed={current.wind_speed_10m} temperature={temp(current.temperature_2m)} feelsLike={temp(current.apparent_temperature)} condition={condition[0]} time={current.time} place={place?.name}/>
