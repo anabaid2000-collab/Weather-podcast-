@@ -13,7 +13,7 @@ export default function ForecastFM({place,forecast,unit}) {
  const [hostId,setHostId]=useState("calm"),[activity,setActivity]=useState("commuting");
  const [voices,setVoices]=useState([]),[voiceId,setVoiceId]=useState("");
  const [question,setQuestion]=useState(""),[answer,setAnswer]=useState(""),[drill,setDrill]=useState(false),[speaking,setSpeaking]=useState(false);
- const city=place?.name||"your city", u=unit||"C", temp=n(current.temperature_2m), hi=n(daily.temperature_2m_max?.[0]), lo=n(daily.temperature_2m_min?.[0]), wind=n(current.wind_speed_10m), rain=n(daily.precipitation_probability_max?.[0]), condition=codes[current.weather_code]||"changing conditions";
+ const city=place?.name||"your city", u=unit||"C", convert=(v)=>u==="F"&&Number.isFinite(v)?Math.round(v*9/5+32):n(v), temp=convert(current.temperature_2m), hi=convert(daily.temperature_2m_max?.[0]), lo=convert(daily.temperature_2m_min?.[0]), wind=n(current.wind_speed_10m), rain=n(daily.precipitation_probability_max?.[0]), condition=codes[current.weather_code]||"changing conditions";
  const host=hosts.find(x=>x.id===hostId)||hosts[0];
  useEffect(()=>{let active=true;Speech.getAvailableVoicesAsync().then(v=>{if(active){setVoices(v||[]);const preferred=(v||[]).find(x=>x.language?.toLowerCase().startsWith("en"));if(preferred)setVoiceId(preferred.identifier);}}).catch(()=>{});return()=>{active=false;Speech.stop();};},[]);
  const episode=useMemo(()=>{
