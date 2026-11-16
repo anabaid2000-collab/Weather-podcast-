@@ -7,7 +7,7 @@ import { auth, db } from "./src/firebase";
 import { doc, getDoc, serverTimestamp, setDoc } from "firebase/firestore";
 import { signInAnonymously } from "firebase/auth";
 import { colors, spacing, radius } from "./src/theme";
-import ForecastFM from "./src/forecast-fm";
+import ForecastFM from "./src/forecast-fm"; // native Forecast FM integration
 
 const FAVORITES_KEY = "skycast.favoriteCities.v1";
 const weatherCodes = {
