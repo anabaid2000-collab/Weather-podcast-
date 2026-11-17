@@ -6,6 +6,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { auth, db } from "./src/firebase";
 import { doc, getDoc, serverTimestamp, setDoc } from "firebase/firestore";
 import { signInAnonymously } from "firebase/auth";
+import { registerForPushNotificationsAsync } from "./src/notifications";
 import { colors, spacing, radius } from "./src/theme";
 import ForecastFM from "./src/forecast-fm"; // native Forecast FM integration
 
@@ -58,6 +59,7 @@ export default function App() {
   const [error, setError] = useState("");
   const [favorites, setFavorites] = useState([]);
   const [firebaseUserId, setFirebaseUserId] = useState(null);
+  const [pushStatus, setPushStatus] = useState("Not enabled");
   const [compare, setCompare] = useState([]);
   const [comparing, setComparing] = useState(false);
   const latestWeatherRequest = useRef(0);
@@ -200,6 +202,29 @@ export default function App() {
     try { await AsyncStorage.setItem("skycast.preferences.v1", JSON.stringify(prefs)); } catch {}
     if (firebaseUserId) {
       try { await setDoc(doc(db, "users", firebaseUserId), { preferences: prefs, updatedAt: serverTimestamp() }, { merge: true }); } catch {}
+    }
+  };
+
+  const enablePushNotifications = async () => {
+    if (!firebaseUserId) {
+      setPushStatus("Connect to Firebase first");
+      return;
+    }
+    setPushStatus("Requesting permission…");
+    try {
+      const token = await registerForPushNotificationsAsync();
+      if (!token) {
+        setPushStatus("Permission not granted or unavailable");
+        return;
+      }
+      await setDoc(doc(db, "users", firebaseUserId), {
+        expoPushToken: token,
+        pushNotificationsEnabled: true,
+        pushTokenUpdatedAt: serverTimestamp()
+      }, { merge: true });
+      setPushStatus("Enabled on this device");
+    } catch (notificationError) {
+      setPushStatus(notificationError?.message || "Could not enable notifications");
     }
   };
 
@@ -522,6 +547,16 @@ export default function App() {
         <Pressable accessibilityRole="button" onPress={() => setPage("dashboard")} style={styles.toolButton}><Text style={styles.toolButtonTitle}>★  Saved cities & settings</Text><Text style={styles.toolButtonHint}>Manage favourite places and temperature units</Text></Pressable>
         <Pressable accessibilityRole="button" onPress={() => setPage("sun")} style={styles.toolButton}><Text style={styles.toolButtonTitle}>☀  Weather calendar</Text><Text style={styles.toolButtonHint}>See the seven-day outlook and daylight times</Text></Pressable>
         <Pressable accessibilityRole="button" onPress={() => setPage("rain")} style={styles.toolButton}><Text style={styles.toolButtonTitle}>☂  Rain & air quality</Text><Text style={styles.toolButtonHint}>Check rain chances and air-quality readings</Text></Pressable>
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Device notifications</Text>
+          <View style={styles.featureCard}>
+            <Text style={styles.muted}>Allow SkyCast to send weather updates to this device. You can change notification permission in Android settings.</Text>
+            <Pressable accessibilityRole="button" disabled={!firebaseUserId} onPress={enablePushNotifications} style={[styles.toolButton,!firebaseUserId&&styles.disabled]}>
+              <Text style={styles.toolButtonTitle}>Enable push notifications</Text>
+              <Text style={styles.toolButtonHint}>{pushStatus}</Text>
+            </Pressable>
+          </View>
+        </View>
         <Text style={styles.muted}>More tools use the same live forecast. Some map details open in your browser.</Text>
       </View> : null}
       <Text style={styles.footer}>{offlineCopy ? "Offline mode · Showing your last saved forecast. Reconnect to refresh live data. " : ""}Weather and air-quality data by Open-Meteo. Forecasts are estimates and can change.</Text>
