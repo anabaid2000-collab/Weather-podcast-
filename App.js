@@ -481,7 +481,7 @@ export default function App() {
               <Text style={styles.settingValue}>{alertsEnabled ? "ON" : "OFF"}</Text>
             </Pressable>
             {alertsEnabled ? (smartAlerts.length ? smartAlerts.map((alert) => <View key={alert.title} style={styles.alertLine}><Text style={styles.featureText}>{alert.icon}  {alert.title}</Text><Text style={styles.muted}>{alert.detail}</Text></View>) : <Text style={styles.muted}>No high-priority weather alerts for this forecast.</Text>) : <Text style={styles.muted}>Weather alert cards are currently turned off.</Text>}
-            <Text style={styles.featureHint}>These are in-app alerts. Device notifications can be added in a later setup step.</Text>
+            <Text style={styles.featureHint}>These weather cards appear in SkyCast. Enable device notifications from More to register this phone for remote updates.</Text>
           </View>
         </View>
 
