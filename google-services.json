@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "909534854839",
+    "project_id": "weather-podcast-5cb7c",
+    "storage_bucket": "weather-podcast-5cb7c.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:909534854839:android:4140f9791d00d8d41e1732",
+        "android_client_info": {
+          "package_name": "com.skycast.weatherpodcast"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCY10g3zIvoO3ldXdpeiOg5jTRoeDzvaWo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
