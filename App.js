@@ -33,7 +33,7 @@ async function getCity(name) {
 }
 async function getWeather(city) {
   const base = "https://api.open-meteo.com/v1/forecast?latitude=" + city.latitude + "&longitude=" + city.longitude;
-  const forecastUrl = base + "&current=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,weather_code,wind_speed_10m&hourly=temperature_2m,precipitation_probability,uv_index,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,uv_index_max,sunrise,sunset&timezone=auto&forecast_days=7";
+  const forecastUrl = base + "&current=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,weather_code,wind_speed_10m,wind_direction_10m,pressure_msl,cloud_cover,visibility&hourly=temperature_2m,precipitation_probability,uv_index,weather_code,relative_humidity_2m,wind_speed_10m,visibility,cloud_cover&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,uv_index_max,sunrise,sunset&timezone=auto&forecast_days=7";
   const [forecastResponse, airResponse] = await Promise.all([
     fetch(forecastUrl),
     fetch("https://air-quality-api.open-meteo.com/v1/air-quality?latitude=" + city.latitude + "&longitude=" + city.longitude + "&hourly=us_aqi,pm2_5,pm10&timezone=auto&forecast_days=1").catch(() => null)
@@ -309,7 +309,7 @@ export default function App() {
         <View><Text style={styles.brand}>SKYCAST</Text><Text style={styles.eyebrow}>WEATHER, IN A CLEARER LIGHT</Text></View>
         <Text style={styles.live}>● LIVE DATA</Text>
       </View>
-      {page !== "home" ? <Text style={styles.pageHeading}>{({story:"Weather Story",rain:"Rain & Air Quality",sun:"Sun & Sky",travel:"Travel Planner",forecast:"Your forecast",radio:"Forecast FM",explore:"Explore",dashboard:"Personal Dashboard",more:"More tools"})[page]}</Text> : null}
+      {page !== "home" ? <Text style={styles.pageHeading}>{({rain:"Rain, Air & Sun",travel:"Travel Planner",forecast:"Your forecast",radio:"Forecast FM",explore:"Explore",dashboard:"Personal Dashboard",more:"More tools"})[page]}</Text> : null}
 {page === "home" ? <>
       <Text style={styles.heading}>Weather, in a clearer light.</Text>
       <Text style={styles.subheading}>A fresh, thoughtful look at the sky around you.</Text>
@@ -329,7 +329,7 @@ export default function App() {
       : error && !current ? <View style={styles.state}><Text style={styles.weatherIcon}>☁️</Text><Text style={styles.cardTitle}>Forecast temporarily unavailable</Text><Text style={styles.muted}>{error}</Text><Pressable onPress={() => loadCity(query)} style={styles.retry}><Text style={styles.buttonText}>Try again</Text></Pressable></View>
       : current && daily ? <>
         {error ? <Text style={styles.inlineError}>{error}</Text> : null}
-{page === "radio" ? <ForecastFM place={place} forecast={data.forecast} unit={unit}/> : null}
+{page === "radio" ? <ForecastFM place={place} forecast={data.forecast} air={data.air} unit={unit}/> : null}
 {page === "forecast" ? <View style={styles.section}>
   <Text style={styles.sectionTitle}>The week ahead</Text>
   <Text style={styles.muted}>A seven-day view for {place?.name || "your location"}.</Text>
@@ -375,15 +375,6 @@ export default function App() {
 
 
 
-{page === "story" ? <>
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Your written weather briefing</Text>
-          <View style={styles.briefing}><Text style={styles.briefingKicker}>THE DAILY OUTLOOK</Text><Text style={styles.briefingText}>{briefing}</Text><Text style={styles.briefingFooter}>Updated with the latest available forecast · No audio or speech</Text></View>
-        </View>
-
-</> : null}
-
-
 {page === "rain" ? <>
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Environment snapshot</Text>
@@ -397,6 +388,21 @@ export default function App() {
         </View>
 
         {daily.precipitation_probability_max?.[0] >= 60 ? <View style={styles.alert}><Text style={styles.alertTitle}>☂ Rain heads-up</Text><Text style={styles.alertText}>There is a {Math.round(daily.precipitation_probability_max[0])}% chance of precipitation today. Consider carrying an umbrella.</Text></View> : null}
+
+</> : null}
+
+
+{page === "rain" ? <>
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Sun & sky</Text>
+          <View style={styles.featureCard}>
+            <View style={styles.sunRow}>
+              <View style={styles.sunMetric}><Text style={styles.sunIcon}>🌅</Text><Text style={styles.featureHint}>SUNRISE</Text><Text style={styles.sunValue}>{daily.sunrise?.[0] ? clockLabel(daily.sunrise[0]) : "—"}</Text></View>
+              <View style={styles.sunMetric}><Text style={styles.sunIcon}>🌇</Text><Text style={styles.featureHint}>SUNSET</Text><Text style={styles.sunValue}>{daily.sunset?.[0] ? clockLabel(daily.sunset[0]) : "—"}</Text></View>
+            </View>
+            <Text style={styles.featureText}>Daylight duration · {daily.sunrise?.[0] && daily.sunset?.[0] ? (() => { const minutes = Math.max(0,Math.round((new Date(daily.sunset[0])-new Date(daily.sunrise[0]))/60000)); return Math.floor(minutes/60)+"h "+(minutes%60)+"m"; })() : "Unavailable"}</Text>
+          </View>
+        </View>
 
 </> : null}
 
@@ -442,21 +448,6 @@ export default function App() {
                 <Text style={styles.rainValue}>{Math.round(chance)}%</Text>
               </View>;
             })}
-          </View>
-        </View>
-
-</> : null}
-
-
-{page === "sun" ? <>
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Sky & sun tracker</Text>
-          <View style={styles.featureCard}>
-            <View style={styles.sunRow}>
-              <View style={styles.sunMetric}><Text style={styles.sunIcon}>🌅</Text><Text style={styles.featureHint}>SUNRISE</Text><Text style={styles.sunValue}>{daily.sunrise?.[0] ? clockLabel(daily.sunrise[0]) : "—"}</Text></View>
-              <View style={styles.sunMetric}><Text style={styles.sunIcon}>🌇</Text><Text style={styles.featureHint}>SUNSET</Text><Text style={styles.sunValue}>{daily.sunset?.[0] ? clockLabel(daily.sunset[0]) : "—"}</Text></View>
-            </View>
-            <Text style={styles.featureText}>Daylight duration · {daily.sunrise?.[0] && daily.sunset?.[0] ? (() => { const minutes = Math.max(0,Math.round((new Date(daily.sunset[0])-new Date(daily.sunrise[0]))/60000)); return Math.floor(minutes/60)+"h "+(minutes%60)+"m"; })() : "Unavailable"}</Text>
           </View>
         </View>
 
@@ -560,8 +551,8 @@ export default function App() {
       {page === "more" ? <View style={styles.section}>
         <Pressable accessibilityRole="button" onPress={() => place && Linking.openURL("https://www.openstreetmap.org/?mlat="+place.latitude+"&mlon="+place.longitude+"#map=10/"+place.latitude+"/"+place.longitude)} style={styles.toolButton}><Text style={styles.toolButtonTitle}>⌖  Open Live Weather Map</Text><Text style={styles.toolButtonHint}>View the selected city on an interactive map</Text></Pressable>
         <Pressable accessibilityRole="button" onPress={() => setPage("dashboard")} style={styles.toolButton}><Text style={styles.toolButtonTitle}>★  Saved cities & settings</Text><Text style={styles.toolButtonHint}>Manage favourite places and temperature units</Text></Pressable>
-        <Pressable accessibilityRole="button" onPress={() => setPage("sun")} style={styles.toolButton}><Text style={styles.toolButtonTitle}>☀  Weather calendar</Text><Text style={styles.toolButtonHint}>See the seven-day outlook and daylight times</Text></Pressable>
-        <Pressable accessibilityRole="button" onPress={() => setPage("rain")} style={styles.toolButton}><Text style={styles.toolButtonTitle}>☂  Rain & air quality</Text><Text style={styles.toolButtonHint}>Check rain chances and air-quality readings</Text></Pressable>
+        <Pressable accessibilityRole="button" onPress={() => setPage("rain")} style={styles.toolButton}><Text style={styles.toolButtonTitle}>☀  Weather calendar</Text><Text style={styles.toolButtonHint}>See the seven-day outlook and daylight times</Text></Pressable>
+        <Pressable accessibilityRole="button" onPress={() => setPage("rain")} style={styles.toolButton}><Text style={styles.toolButtonTitle}>☂  Rain, Air & Sun</Text><Text style={styles.toolButtonHint}>Rain, air quality, UV and daylight</Text></Pressable>
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Device notifications</Text>
           <View style={styles.featureCard}>
@@ -582,7 +573,7 @@ export default function App() {
       {[
         ["home","Home","⌂"],["forecast","Forecast","◷"],["explore","Explore","◇"],["radio","Radio","◉"],["more","More","•••"]
       ].map(([key,label,symbol]) => {
-        const selected = key === page || (key === "explore" && ["story","rain","sun","travel"].includes(page)) || (key === "more" && page === "dashboard");
+        const selected = key === page || (key === "explore" && ["rain","travel"].includes(page)) || (key === "more" && page === "dashboard");
         return <Pressable key={key} accessibilityRole="button" accessibilityState={{selected}} onPress={()=>setPage(key)} style={styles.bottomNavItem}>
           <Text style={[styles.bottomNavIcon,selected&&styles.bottomNavIconActive]}>{symbol}</Text>
           <Text style={[styles.bottomNavLabel,selected&&styles.bottomNavLabelActive]}>{label}</Text>
