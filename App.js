@@ -12,7 +12,7 @@ import ForecastFM from "./src/forecast-fm"; // native Forecast FM integration
 
 const FAVORITES_KEY = "skycast.favoriteCities.v1";
 const weatherCodes = {
-  0:["Clear sky","○"],1:["Mainly clear","◐"],2:["Partly cloudy","◑"],3:["Overcast","☁︎"],
+  0:["Clear sky","○"],1:["Mainly clear","◐"],2:["Partly cloudy","◑"],3:["Overcast","≋"],
   45:["Fog","≋"],48:["Rime fog","≋"],51:["Light drizzle","╱"],53:["Drizzle","╱"],55:["Heavy drizzle","╱"],
   56:["Freezing drizzle","╱"],57:["Freezing drizzle","╱"],61:["Light rain","╱"],63:["Rain","╱"],65:["Heavy rain","╱"],
   66:["Freezing rain","╱"],67:["Heavy freezing rain","╱"],71:["Light snow","*"],73:["Snow","*"],75:["Heavy snow","*"],
@@ -345,7 +345,7 @@ export default function App() {
 
 </> : null}
       {loading ? <View style={styles.state}><ActivityIndicator size="large" color={colors.accent}/><Text style={styles.muted}>Consulting the weather bureau…</Text></View>
-      : error && !current ? <View style={styles.state}><Text style={styles.weatherIcon}>☁︎</Text><Text style={styles.cardTitle}>Forecast temporarily unavailable</Text><Text style={styles.muted}>{error}</Text><Pressable onPress={() => loadCity(query)} style={styles.retry}><Text style={styles.buttonText}>Try again</Text></Pressable></View>
+      : error && !current ? <View style={styles.state}><Text style={styles.weatherIcon}>≋</Text><Text style={styles.cardTitle}>Forecast temporarily unavailable</Text><Text style={styles.muted}>{error}</Text><Pressable onPress={() => loadCity(query)} style={styles.retry}><Text style={styles.buttonText}>Try again</Text></Pressable></View>
       : current && daily ? <>
         {error ? <Text style={styles.inlineError}>{error}</Text> : null}
 {page === "radio" ? <ForecastFM place={place} forecast={data.forecast} air={data.air} unit={unit}/> : null}
@@ -586,7 +586,7 @@ export default function App() {
       {page === "more" ? <View style={styles.section}>
         <Pressable accessibilityRole="button" onPress={() => place && Linking.openURL("https://www.openstreetmap.org/?mlat="+place.latitude+"&mlon="+place.longitude+"#map=10/"+place.latitude+"/"+place.longitude)} style={styles.toolButton}><Text style={styles.toolButtonTitle}>⌖  Open Live Weather Map</Text><Text style={styles.toolButtonHint}>View the selected city on an interactive map</Text></Pressable>
         <Pressable accessibilityRole="button" onPress={() => setPage("dashboard")} style={styles.toolButton}><Text style={styles.toolButtonTitle}>★  Saved cities & settings</Text><Text style={styles.toolButtonHint}>Manage favourite places and temperature units</Text></Pressable>
-        <Pressable accessibilityRole="button" onPress={() => setPage("rain")} style={styles.toolButton}><Text style={styles.toolButtonTitle}>☀  Weather calendar</Text><Text style={styles.toolButtonHint}>See the seven-day outlook and daylight times</Text></Pressable>
+        <Pressable accessibilityRole="button" onPress={() => setPage("rain")} style={styles.toolButton}><Text style={styles.toolButtonTitle}>○  Weather calendar</Text><Text style={styles.toolButtonHint}>See the seven-day outlook and daylight times</Text></Pressable>
         <Pressable accessibilityRole="button" onPress={() => setPage("rain")} style={styles.toolButton}><Text style={styles.toolButtonTitle}>RAIN  Rain, Air & Sun</Text><Text style={styles.toolButtonHint}>Rain, air quality, UV and daylight</Text></Pressable>
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Device notifications</Text>
@@ -642,7 +642,7 @@ function WeatherModeScene({mode,code,windSpeed=0,temperature,feelsLike,condition
   },[reduced,float,pulse,mode]);
   const floatStyle = useAnimatedStyle(() => ({transform:[{translateY:float.get()}]}));
   const glowStyle = useAnimatedStyle(() => ({opacity:0.35+pulse.get()*0.2,transform:[{scale:0.92+pulse.get()*0.12}]}));
-  const symbol = rain ? "╱" : night ? "🌙" : sunny ? "○" : "◑";
+  const symbol = rain ? "╱" : night ? "◐" : sunny ? "○" : "◑";
   return <View style={[styles.modeScene,{backgroundColor:palette.sky}]}>
     <View style={[styles.modeGlow,{backgroundColor:palette.accent}]}/>
     <View style={styles.modeTopline}>
@@ -707,7 +707,7 @@ function WeatherScene({code,windSpeed=0}) {
     {rain ? <View style={styles.rainDrops}>
       {[0,1,2,3,4,5].map((n)=><View key={n} style={[styles.rainDrop,{left:12+n*27,top:n%2?68:58,backgroundColor:storm?"#D9E3E5":"#6AAFC2"}]}/>)}
     </View> : null}
-    {snow ? <Text style={styles.sceneSnow}>✳   ❄   ✳</Text> : null}
+    {snow ? <Text style={styles.sceneSnow}>✳   *   ✳</Text> : null}
     {storm ? <Text style={styles.sceneLightning}>ϟ</Text> : null}
     {windy ? <Animated.Text style={[styles.windLeaf,cloudStyle]}>↝</Animated.Text> : null}
     {fog ? <View style={styles.fogBand}/> : null}
@@ -761,7 +761,7 @@ function CatWeatherScene({code,windSpeed=0}) {
     <View style={styles.catStars}><Text style={styles.catStar}>✦</Text><Text style={styles.catStar}>✧</Text><Text style={styles.catStar}>·</Text></View>
     {fog ? <View style={styles.catFog}/>:null}
     {rain ? <View style={styles.catRain}><Text style={styles.catRainMarks}>╱  ╱  ╱  ╱  ╱  ╱</Text></View>:null}
-    {snow ? <Text style={styles.catSnow}>✳     ❄      ✳</Text>:null}
+    {snow ? <Text style={styles.catSnow}>✳     *      ✳</Text>:null}
     {storm ? <Text style={styles.catBolt}>ϟ</Text>:null}
     <View style={styles.catFarHill}/>
     <View style={styles.catPineLeft}><View style={styles.catPineTop}/><View style={styles.catPineMid}/><View style={styles.catPineLow}/><View style={styles.catPineTrunk}/></View>
