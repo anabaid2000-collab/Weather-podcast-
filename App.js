@@ -302,20 +302,12 @@ export default function App() {
     return alerts;
   }, [current, daily, data?.air?.aqi]);
 
-  return <View style={styles.screen}>
-    <StatusBar barStyle="dark-content" backgroundColor={colors.background}/>
+  return <View style={[styles.screen, weatherMode === "night" ? styles.screenNight : weatherMode === "rain" ? styles.screenRain : styles.screenDay]}>
+    <StatusBar barStyle={weatherMode === "night" ? "light-content" : "dark-content"} backgroundColor={weatherMode === "night" ? "#101827" : colors.background}/>
     <ScrollView contentInsetAdjustmentBehavior="automatic" keyboardShouldPersistTaps="handled" contentContainerStyle={styles.content}>
       <View style={styles.top}>
-        <View><Text style={styles.brand}>SKYCAST WEATHER BUREAU</Text><Text style={styles.eyebrow}>DAILY OBSERVATIONS · LOCAL FORECASTS</Text></View>
+        <View><Text style={styles.brand}>SKYCAST</Text><Text style={styles.eyebrow}>WEATHER, IN A CLEARER LIGHT</Text></View>
         <Text style={styles.live}>● LIVE DATA</Text>
-      </View>
-      <View style={styles.pageNav}>
-        {[
-          ["home","Home"],["story","Weather Story"],["rain","Rain & Air"],["sun","Sun & Sky"],
-          ["travel","Travel"],["forecast","Forecast FM"],["dashboard","Dashboard"],["more","More"]
-        ].map(([key,label]) => <Pressable key={key} accessibilityRole="button" accessibilityState={{selected:page===key}} onPress={() => setPage(key)} style={[styles.pageNavButton,page===key&&styles.pageNavButtonActive]}>
-          <Text style={[styles.pageNavText,page===key&&styles.pageNavTextActive]}>{label}</Text>
-        </Pressable>)}
       </View>
       {page !== "home" ? <Text style={styles.pageHeading}>{({story:"Weather Story",rain:"Rain & Air Quality",sun:"Sun & Sky",travel:"Travel Planner",forecast:"Forecast FM",dashboard:"Personal Dashboard",more:"More tools"})[page]}</Text> : null}
 {page === "home" ? <>
