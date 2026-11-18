@@ -527,6 +527,21 @@ export default function App() {
               <Text style={styles.place}>{travelResult.city.name}, {travelResult.city.country}</Text>
               <Text style={styles.compareTemp}>{temp(travelResult.data.forecast.current.temperature_2m)} · {describe(travelResult.data.forecast.current.weather_code)[0]}</Text>
               <Text style={styles.muted}>Feels like {temp(travelResult.data.forecast.current.apparent_temperature)} · Rain chance today {number(travelResult.data.forecast.daily.precipitation_probability_max?.[0],"%")}</Text>
+              {(() => {
+                const tc=travelResult.data.forecast.current, rain=travelResult.data.forecast.daily.precipitation_probability_max?.[0]??0, code=tc.weather_code;
+                const risks=[(code===95||code===96||code===99)&&"thunderstorms",(code===65||code===82||rain>=70)&&"heavy rain or high rain probability",(code===45||code===48)&&"fog and reduced visibility",tc.wind_speed_10m>=40&&"strong wind"].filter(Boolean);
+                const risk=risks.length?"Caution advised: "+risks.join(", ")+". Allow extra time and check local conditions before departure.":"No major weather-related road risk is indicated by this forecast snapshot. Check live traffic and local road reports before leaving.";
+                const officialUrl=/Bangladesh/i.test(travelResult.city.country||"")?"https://bmd.gov.bd/":"https://worldweather.wmo.int/";
+                return <View style={styles.travelResult}>
+                  <Text style={styles.sectionTitle}>Weather-related road conditions</Text>
+                  <Text style={styles.featureText}>{risk}</Text>
+                  <Text style={styles.timestamp}>Weather-risk estimate only — not a live road-closure, flooding-depth or traffic feed. SkyCast cannot confirm that a road is passable.</Text>
+                  <Text style={styles.sectionTitle}>Official weather alerts</Text>
+                  <Text style={styles.muted}>Verified government alert bulletins are not yet integrated for every country. Check the destination's official meteorological service before travelling.</Text>
+                  <Pressable onPress={()=>Linking.openURL(officialUrl)} style={styles.mapLink}><Text style={styles.mapLinkText}>Open official weather information →</Text></Pressable>
+                  <Pressable onPress={()=>Linking.openURL("https://www.google.com/maps/dir/?api=1&destination="+encodeURIComponent(travelResult.city.name+", "+travelResult.city.country)+"&travelmode=driving")} style={styles.mapLink}><Text style={styles.mapLinkText}>Check driving route and live traffic in Maps →</Text></Pressable>
+                </View>;
+              })()}
               <Pressable onPress={() => loadCity(travelResult.city.name)} style={styles.mapLink}><Text style={styles.mapLinkText}>Open destination forecast on Home →</Text></Pressable>
             </View> : null}
           </View>
