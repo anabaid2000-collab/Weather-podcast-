@@ -329,7 +329,30 @@ export default function App() {
       : error && !current ? <View style={styles.state}><Text style={styles.weatherIcon}>☁️</Text><Text style={styles.cardTitle}>Forecast temporarily unavailable</Text><Text style={styles.muted}>{error}</Text><Pressable onPress={() => loadCity(query)} style={styles.retry}><Text style={styles.buttonText}>Try again</Text></Pressable></View>
       : current && daily ? <>
         {error ? <Text style={styles.inlineError}>{error}</Text> : null}
-{page === "forecast" ? <ForecastFM place={place} forecast={data.forecast} unit={unit}/> : null}
+{page === "radio" ? <ForecastFM place={place} forecast={data.forecast} unit={unit}/> : null}
+{page === "forecast" ? <View style={styles.section}>
+  <Text style={styles.sectionTitle}>The week ahead</Text>
+  <Text style={styles.muted}>A seven-day view for {place?.name || "your location"}.</Text>
+  <View style={styles.forecast}>
+    {daily.time.map((date,i) => { const w=describe(daily.weather_code[i]); return <View key={"forecast-tab-"+date} style={styles.forecastRow}>
+      <Text style={styles.day}>{dayLabel(date,i)}</Text><Text style={styles.forecastIcon}>{w[1]}</Text><Text style={styles.forecastCondition}>{w[0]}</Text>
+      <Text style={styles.high}>{temp(daily.temperature_2m_max[i])}</Text><Text style={styles.low}>{temp(daily.temperature_2m_min[i])}</Text>
+      <Text style={styles.rainChance}>{number(daily.precipitation_probability_max[i],"%")}</Text>
+    </View>; })}
+  </View>
+  <Text style={styles.timestamp}>Hourly details and spoken briefings are available in Forecast FM.</Text>
+  <Pressable onPress={()=>setPage("radio")} style={styles.exploreTile}><Text style={styles.exploreTileTitle}>Listen to Forecast FM →</Text><Text style={styles.exploreTileHint}>Choose a presenter and hear today's outlook.</Text></Pressable>
+</View> : null}
+{page === "explore" ? <View style={styles.section}>
+  <Text style={styles.sectionTitle}>Explore your atmosphere</Text>
+  <Text style={styles.muted}>Choose a weather tool for {place?.name || "your city"}.</Text>
+  {[
+    ["story","Weather Story","A written briefing for today."],
+    ["rain","Rain & Air Quality","Rain chances and air-quality readings."],
+    ["sun","Sun & Sky","Sunrise, sunset and daylight."],
+    ["travel","Travel Planner","Check weather at another destination."]
+  ].map(([key,title,hint])=><Pressable key={key} onPress={()=>setPage(key)} style={styles.exploreTile}><Text style={styles.exploreTileTitle}>{title}  →</Text><Text style={styles.exploreTileHint}>{hint}</Text></Pressable>)}
+</View> : null}
 {page === "home" ? <>
         <View style={styles.hero}>
           <WeatherModeScene mode={weatherMode} code={current.weather_code} windSpeed={current.wind_speed_10m} temperature={temp(current.temperature_2m)} feelsLike={temp(current.apparent_temperature)} condition={condition[0]} time={current.time} place={place?.name}/>
@@ -870,7 +893,16 @@ const styles = StyleSheet.create({
   catCaption:{position:"absolute",bottom:7,left:10,right:10,alignItems:"center",zIndex:6},
   catCaptionText:{color:"#FFF8E9",fontSize:10,fontWeight:"800",backgroundColor:"rgba(40,55,63,0.62)",paddingHorizontal:12,paddingVertical:5,borderRadius:20,overflow:"hidden"},
 
-  screen:{flex:1,backgroundColor:colors.background},content:{padding:spacing.lg,paddingTop:48,paddingBottom:64,gap:spacing.md},
+  screen:{flex:1,backgroundColor:colors.background},screenDay:{backgroundColor:"#F3F8FF"},screenRain:{backgroundColor:"#EAF2FA"},screenNight:{backgroundColor:"#101827"},content:{padding:spacing.lg,paddingTop:48,paddingBottom:112,gap:spacing.md},
+  bottomNav:{position:"absolute",left:12,right:12,bottom:12,minHeight:68,backgroundColor:"#FFFFFF",borderRadius:22,borderWidth:1,borderColor:"#DCE7F3",flexDirection:"row",alignItems:"center",justifyContent:"space-around",paddingHorizontal:5,paddingVertical:7,elevation:10,shadowColor:"#183A5B",shadowOpacity:.12,shadowRadius:16,shadowOffset:{width:0,height:5}},
+  bottomNavItem:{flex:1,minHeight:52,alignItems:"center",justifyContent:"center",gap:3,borderRadius:15},
+  bottomNavIcon:{fontSize:19,color:"#7890A8",fontWeight:"700"},
+  bottomNavIconActive:{color:"#287FC5"},
+  bottomNavLabel:{fontSize:10,color:"#71849A",fontWeight:"600"},
+  bottomNavLabelActive:{color:"#287FC5",fontWeight:"900"},
+  exploreTile:{backgroundColor:"#FFFFFF",borderWidth:1,borderColor:"#DCE7F3",borderRadius:18,padding:16,gap:5,marginTop:8},
+  exploreTileTitle:{color:"#21496E",fontSize:15,fontWeight:"800"},
+  exploreTileHint:{color:"#71849A",fontSize:12,lineHeight:18},
   pageNav:{flexDirection:"row",flexWrap:"wrap",gap:8,paddingVertical:12,borderTopWidth:1,borderBottomWidth:1,borderColor:colors.border},
   pageNavButton:{paddingHorizontal:14,paddingVertical:10,borderRadius:radius.sm,borderWidth:1,borderColor:colors.border,backgroundColor:colors.panel},
   pageNavButtonActive:{backgroundColor:colors.navy,borderColor:colors.navy},
