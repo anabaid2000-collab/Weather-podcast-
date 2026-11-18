@@ -233,8 +233,27 @@ export default function App() {
     setTravelLoading(true); setTravelError(""); setTravelResult(null);
     try {
       const city = await getCity(travelQuery);
-      const result = await getWeather(city);
-      setTravelResult({ city, data: result });
+      const [result, alertResponse] = await Promise.all([
+        getWeather(city),
+        fetch("https://www.gdacs.org/gdacsapi/api/events/geteventlist/EVENTS4APP").catch(() => null)
+      ]);
+      let alerts = null;
+      if (alertResponse?.ok) {
+        const feed = await alertResponse.json();
+        const features = Array.isArray(feed?.features) ? feed.features : [];
+        const country = String(city.country || "").toLowerCase();
+        alerts = features.filter((feature) => {
+          const p = feature?.properties || {};
+          const eventType = String(p.eventtype || p.eventType || "").toUpperCase();
+          const countryValue = Array.isArray(p.country) ? p.country.join(" ") : String(p.country || p.countryname || p.countryName || "");
+          const active = p.iscurrent === true || String(p.iscurrent).toLowerCase() === "true" || !("iscurrent" in p);
+          return active && countryValue.toLowerCase().includes(country) && ["TC","FL","DR","WF"].includes(eventType);
+        }).slice(0, 5).map((feature) => {
+          const p = feature.properties || {};
+          return { name: p.name || p.eventname || p.eventName || p.eventtype || "Regional hazard", type: p.eventtype || p.eventType || "Hazard", level: p.alertlevel || p.alertLevel || "Information", details: p.url || p.reportUrl || p.detailsUrl || null };
+        });
+      }
+      setTravelResult({ city, data: result, alerts });
     } catch (err) { setTravelError(err.message || "Could not load destination forecast."); }
     finally { setTravelLoading(false); }
   };
@@ -536,8 +555,11 @@ export default function App() {
                   <Text style={styles.sectionTitle}>Weather-related road conditions</Text>
                   <Text style={styles.featureText}>{risk}</Text>
                   <Text style={styles.timestamp}>Weather-risk estimate only — not a live road-closure, flooding-depth or traffic feed. SkyCast cannot confirm that a road is passable.</Text>
+                  <Text style={styles.sectionTitle}>Regional hazard alerts</Text>
+                  {travelResult.alerts === null ? <Text style={styles.muted}>The GDACS alert feed could not be reached. Check the official local weather service.</Text> : travelResult.alerts.length ? travelResult.alerts.map((alert,i)=><View key={"gdacs-"+i} style={styles.alert}><Text style={styles.alertTitle}>{alert.level} · {alert.name}</Text><Text style={styles.alertText}>{alert.type} alert reported for {travelResult.city.country}. Check the source details and local instructions.</Text>{alert.details ? <Pressable onPress={()=>Linking.openURL(alert.details)} style={styles.mapLink}><Text style={styles.mapLinkText}>Read alert details →</Text></Pressable> : null}</View>) : <Text style={styles.muted}>No matching current GDACS flood, tropical-cyclone, drought or wildfire alert was found for this country in the latest feed. This does not mean there are no local weather warnings.</Text>}
+                  <Text style={styles.timestamp}>Major regional hazard feed: Global Disaster Alert and Coordination System (GDACS). It does not replace local government weather warnings.</Text>
                   <Text style={styles.sectionTitle}>Official weather alerts</Text>
-                  <Text style={styles.muted}>Verified government alert bulletins are not yet integrated for every country. Check the destination's official meteorological service before travelling.</Text>
+                  <Text style={styles.muted}>For local forecasts and warnings, check the destination's official meteorological service.</Text>
                   <Pressable onPress={()=>Linking.openURL(officialUrl)} style={styles.mapLink}><Text style={styles.mapLinkText}>Open official weather information →</Text></Pressable>
                   <Pressable onPress={()=>Linking.openURL("https://www.google.com/maps/dir/?api=1&destination="+encodeURIComponent(travelResult.city.name+", "+travelResult.city.country)+"&travelmode=driving")} style={styles.mapLink}><Text style={styles.mapLinkText}>Check driving route and live traffic in Maps →</Text></Pressable>
                 </View>;
