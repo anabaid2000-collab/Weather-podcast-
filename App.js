@@ -366,9 +366,7 @@ export default function App() {
   <Text style={styles.sectionTitle}>Explore your atmosphere</Text>
   <Text style={styles.muted}>Choose a weather tool for {place?.name || "your city"}.</Text>
   {[
-    ["story","Weather Story","A written briefing for today."],
-    ["rain","Rain & Air Quality","Rain chances and air-quality readings."],
-    ["sun","Sun & Sky","Sunrise, sunset and daylight."],
+    ["rain","Rain, Air & Sun","Rain chances, air quality, UV, sunrise and sunset."],
     ["travel","Travel Planner","Check weather at another destination."]
   ].map(([key,title,hint])=><Pressable key={key} onPress={()=>setPage(key)} style={styles.exploreTile}><Text style={styles.exploreTileTitle}>{title}  →</Text><Text style={styles.exploreTileHint}>{hint}</Text></Pressable>)}
 </View> : null}
