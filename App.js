@@ -468,7 +468,7 @@ export default function App() {
         </View>
 
         <View style={styles.section}>
-          <View style={styles.sectionTop}><Text style={styles.sectionTitle}>Weather calendar</Text><Text style={styles.eyebrow}>7-DAY VIEW</Text></View>
+          <View style={styles.sectionTop}><Text style={styles.sectionTitle}>Rain, Air & Sun</Text><Text style={styles.eyebrow}>7-DAY VIEW</Text></View>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.calendarRow}>
             {daily.time.map((date,i) => <View key={"calendar-"+date} style={styles.calendarCard}>
               <Text style={styles.featureHint}>{dayLabel(date,i)}</Text>
