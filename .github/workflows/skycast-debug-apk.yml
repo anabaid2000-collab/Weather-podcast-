@@ -1,4 +1,4 @@
-name: SkyCast Android Debug APK
+name: SkyCast Android Standalone APK
 
 on:
   push:
@@ -18,8 +18,8 @@ permissions:
   contents: read
 
 jobs:
-  build-debug-apk:
-    name: Build installable debug APK
+  build-standalone-apk:
+    name: Build standalone APK with bundled JavaScript
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
@@ -43,14 +43,14 @@ jobs:
       - name: Generate Android native project
         run: npx expo prebuild --platform android --no-install --clean
 
-      - name: Build debug APK
+      - name: Build standalone release APK
         working-directory: android
-        run: ./gradlew assembleDebug --no-daemon
+        run: ./gradlew assembleRelease --no-daemon
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: skycast-vintage-debug-apk
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+          name: skycast-vintage-standalone-apk
+          path: android/app/build/outputs/apk/release/app-release.apk
           if-no-files-found: error
           retention-days: 14
