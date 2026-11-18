@@ -555,6 +555,17 @@ export default function App() {
       <Pressable onPress={() => loadCity(place?.name || query)} style={styles.refresh}><Text style={styles.refreshText}>↻  Refresh the forecast</Text></Pressable>
       </> : null}
     </ScrollView>
+    <View style={styles.bottomNav}>
+      {[
+        ["home","Home","⌂"],["forecast","Forecast","◷"],["explore","Explore","◇"],["radio","Radio","◉"],["more","More","•••"]
+      ].map(([key,label,symbol]) => {
+        const selected = key === page || (key === "explore" && ["story","rain","sun","travel"].includes(page)) || (key === "more" && page === "dashboard");
+        return <Pressable key={key} accessibilityRole="button" accessibilityState={{selected}} onPress={()=>setPage(key)} style={styles.bottomNavItem}>
+          <Text style={[styles.bottomNavIcon,selected&&styles.bottomNavIconActive]}>{symbol}</Text>
+          <Text style={[styles.bottomNavLabel,selected&&styles.bottomNavLabelActive]}>{label}</Text>
+        </Pressable>;
+      })}
+    </View>
   </View>;
 }
 
