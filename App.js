@@ -12,17 +12,17 @@ import ForecastFM from "./src/forecast-fm"; // native Forecast FM integration
 
 const FAVORITES_KEY = "skycast.favoriteCities.v1";
 const weatherCodes = {
-  0:["Clear sky","☀️"],1:["Mainly clear","🌤️"],2:["Partly cloudy","⛅"],3:["Overcast","☁️"],
-  45:["Fog","🌫️"],48:["Rime fog","🌫️"],51:["Light drizzle","🌦️"],53:["Drizzle","🌦️"],55:["Heavy drizzle","🌧️"],
-  56:["Freezing drizzle","🌧️"],57:["Freezing drizzle","🌧️"],61:["Light rain","🌦️"],63:["Rain","🌧️"],65:["Heavy rain","🌧️"],
-  66:["Freezing rain","🌧️"],67:["Heavy freezing rain","🌧️"],71:["Light snow","🌨️"],73:["Snow","🌨️"],75:["Heavy snow","❄️"],
-  77:["Snow grains","🌨️"],80:["Rain showers","🌦️"],81:["Rain showers","🌧️"],82:["Heavy showers","⛈️"],
-  85:["Snow showers","🌨️"],86:["Heavy snow showers","❄️"],95:["Thunderstorm","⛈️"],96:["Thunderstorm with hail","⛈️"],99:["Severe thunderstorm","⛈️"]
+  0:["Clear sky","○"],1:["Mainly clear","◐"],2:["Partly cloudy","◑"],3:["Overcast","☁︎"],
+  45:["Fog","≋"],48:["Rime fog","≋"],51:["Light drizzle","╱"],53:["Drizzle","╱"],55:["Heavy drizzle","╱"],
+  56:["Freezing drizzle","╱"],57:["Freezing drizzle","╱"],61:["Light rain","╱"],63:["Rain","╱"],65:["Heavy rain","╱"],
+  66:["Freezing rain","╱"],67:["Heavy freezing rain","╱"],71:["Light snow","*"],73:["Snow","*"],75:["Heavy snow","*"],
+  77:["Snow grains","*"],80:["Rain showers","╱"],81:["Rain showers","╱"],82:["Heavy showers","ϟ"],
+  85:["Snow showers","*"],86:["Heavy snow showers","*"],95:["Thunderstorm","ϟ"],96:["Thunderstorm with hail","ϟ"],99:["Severe thunderstorm","ϟ"]
 };
-const describe = (code) => weatherCodes[code] || ["Changing conditions","🌡️"];
+const describe = (code) => weatherCodes[code] || ["Changing conditions","°"];
 const dayLabel = (date, index) => index === 0 ? "Today" : new Date(date + "T12:00:00").toLocaleDateString(undefined,{weekday:"short"});
-const number = (value, suffix="") => Number.isFinite(value) ? Math.round(value) + suffix : "—";
-const clockLabel = (value) => value?.split("T")?.[1]?.slice(0,5) || "—";
+const number = (value, suffix="") => Number.isFinite(value) ? Math.round(value) + suffix : "-";
+const clockLabel = (value) => value?.split("T")?.[1]?.slice(0,5) || "-";
 
 async function getCity(name) {
   const response = await fetch("https://geocoding-api.open-meteo.com/v1/search?name=" + encodeURIComponent(name) + "&count=1&language=en&format=json");
@@ -314,10 +314,10 @@ export default function App() {
     const alerts = [];
     const rain = daily.precipitation_probability_max?.[0] ?? 0;
     const uv = daily.uv_index_max?.[0] ?? 0;
-    if (rain >= 60) alerts.push({ icon: "☂️", title: "Rain likely", detail: rain + "% chance today. Consider carrying an umbrella." });
-    if (uv >= 8) alerts.push({ icon: "☀️", title: "Very high UV", detail: "Plan shade and sun protection around midday." });
-    if (Number.isFinite(data?.air?.aqi) && data.air.aqi > 100) alerts.push({ icon: "🌫️", title: "Air quality alert", detail: "Air quality may affect sensitive groups. Check local conditions before extended outdoor activity." });
-    if (current.wind_speed_10m >= 40) alerts.push({ icon: "💨", title: "Strong wind", detail: "Wind speeds are elevated. Take care outdoors." });
+    if (rain >= 60) alerts.push({ icon: "RAIN", title: "Rain likely", detail: rain + "% chance today. Consider carrying an umbrella." });
+    if (uv >= 8) alerts.push({ icon: "○", title: "Very high UV", detail: "Plan shade and sun protection around midday." });
+    if (Number.isFinite(data?.air?.aqi) && data.air.aqi > 100) alerts.push({ icon: "≋", title: "Air quality alert", detail: "Air quality may affect sensitive groups. Check local conditions before extended outdoor activity." });
+    if (current.wind_speed_10m >= 40) alerts.push({ icon: "↝", title: "Strong wind", detail: "Wind speeds are elevated. Take care outdoors." });
     return alerts;
   }, [current, daily, data?.air?.aqi]);
 
@@ -345,7 +345,7 @@ export default function App() {
 
 </> : null}
       {loading ? <View style={styles.state}><ActivityIndicator size="large" color={colors.accent}/><Text style={styles.muted}>Consulting the weather bureau…</Text></View>
-      : error && !current ? <View style={styles.state}><Text style={styles.weatherIcon}>☁️</Text><Text style={styles.cardTitle}>Forecast temporarily unavailable</Text><Text style={styles.muted}>{error}</Text><Pressable onPress={() => loadCity(query)} style={styles.retry}><Text style={styles.buttonText}>Try again</Text></Pressable></View>
+      : error && !current ? <View style={styles.state}><Text style={styles.weatherIcon}>☁︎</Text><Text style={styles.cardTitle}>Forecast temporarily unavailable</Text><Text style={styles.muted}>{error}</Text><Pressable onPress={() => loadCity(query)} style={styles.retry}><Text style={styles.buttonText}>Try again</Text></Pressable></View>
       : current && daily ? <>
         {error ? <Text style={styles.inlineError}>{error}</Text> : null}
 {page === "radio" ? <ForecastFM place={place} forecast={data.forecast} air={data.air} unit={unit}/> : null}
@@ -404,7 +404,7 @@ export default function App() {
           <Text style={styles.timestamp}>Air-quality readings are estimates and may be unavailable for some locations.</Text>
         </View>
 
-        {daily.precipitation_probability_max?.[0] >= 60 ? <View style={styles.alert}><Text style={styles.alertTitle}>☂ Rain heads-up</Text><Text style={styles.alertText}>There is a {Math.round(daily.precipitation_probability_max[0])}% chance of precipitation today. Consider carrying an umbrella.</Text></View> : null}
+        {daily.precipitation_probability_max?.[0] >= 60 ? <View style={styles.alert}><Text style={styles.alertTitle}>RAIN Rain heads-up</Text><Text style={styles.alertText}>There is a {Math.round(daily.precipitation_probability_max[0])}% chance of precipitation today. Consider carrying an umbrella.</Text></View> : null}
 
 </> : null}
 
@@ -414,8 +414,8 @@ export default function App() {
           <Text style={styles.sectionTitle}>Sun & sky</Text>
           <View style={styles.featureCard}>
             <View style={styles.sunRow}>
-              <View style={styles.sunMetric}><Text style={styles.sunIcon}>🌅</Text><Text style={styles.featureHint}>SUNRISE</Text><Text style={styles.sunValue}>{daily.sunrise?.[0] ? clockLabel(daily.sunrise[0]) : "—"}</Text></View>
-              <View style={styles.sunMetric}><Text style={styles.sunIcon}>🌇</Text><Text style={styles.featureHint}>SUNSET</Text><Text style={styles.sunValue}>{daily.sunset?.[0] ? clockLabel(daily.sunset[0]) : "—"}</Text></View>
+              <View style={styles.sunMetric}><Text style={styles.sunIcon}>SUNRISE</Text><Text style={styles.featureHint}>SUNRISE</Text><Text style={styles.sunValue}>{daily.sunrise?.[0] ? clockLabel(daily.sunrise[0]) : "-"}</Text></View>
+              <View style={styles.sunMetric}><Text style={styles.sunIcon}>SUNSET</Text><Text style={styles.featureHint}>SUNSET</Text><Text style={styles.sunValue}>{daily.sunset?.[0] ? clockLabel(daily.sunset[0]) : "-"}</Text></View>
             </View>
             <Text style={styles.featureText}>Daylight duration · {daily.sunrise?.[0] && daily.sunset?.[0] ? (() => { const minutes = Math.max(0,Math.round((new Date(daily.sunset[0])-new Date(daily.sunrise[0]))/60000)); return Math.floor(minutes/60)+"h "+(minutes%60)+"m"; })() : "Unavailable"}</Text>
           </View>
@@ -432,7 +432,7 @@ export default function App() {
               <Text style={styles.hourTime}>{clockLabel(time)}</Text>
               <Text style={styles.hourIcon}>{describe(hourly.weather_code?.[i+hourlyStart] ?? daily.weather_code[0])[1]}</Text>
               <Text style={styles.hourTemp}>{temp(hourly.temperature_2m[i+hourlyStart])}</Text>
-              <Text style={styles.hourRain}>☂ {number(hourly.precipitation_probability[i+hourlyStart],"%")}</Text>
+              <Text style={styles.hourRain}>RAIN {number(hourly.precipitation_probability[i+hourlyStart],"%")}</Text>
             </View>)}
           </ScrollView>
         </View>
@@ -443,10 +443,10 @@ export default function App() {
             {daily.time.map((date,i) => { const w=describe(daily.weather_code[i]); return <View key={date} style={styles.forecastRow}>
               <Text style={styles.day}>{dayLabel(date,i)}</Text><Text style={styles.forecastIcon}>{w[1]}</Text><Text style={styles.forecastCondition}>{w[0]}</Text>
               <Text style={styles.high}>{temp(daily.temperature_2m_max[i])}</Text><Text style={styles.low}>{temp(daily.temperature_2m_min[i])}</Text>
-              <Text style={styles.rainChance}>☂ {number(daily.precipitation_probability_max[i],"%")}</Text>
+              <Text style={styles.rainChance}>RAIN {number(daily.precipitation_probability_max[i],"%")}</Text>
             </View>; })}
           </View>
-          <Text style={styles.timestamp}>Sunrise {daily.sunrise?.[0] ? clockLabel(daily.sunrise[0]) : "—"} · Sunset {daily.sunset?.[0] ? clockLabel(daily.sunset[0]) : "—"}</Text>
+          <Text style={styles.timestamp}>Sunrise {daily.sunrise?.[0] ? clockLabel(daily.sunrise[0]) : "-"} · Sunset {daily.sunset?.[0] ? clockLabel(daily.sunset[0]) : "-"}</Text>
         </View>
       </> : null}
 
@@ -475,10 +475,10 @@ export default function App() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>What should I carry?</Text>
           <View style={styles.featureCard}>
-            {(daily.precipitation_probability_max?.[0] >= 40 ? ["☂️ Umbrella or raincoat"] : ["🕶️ Sunglasses if heading into bright sunshine"]).concat(
-              (daily.uv_index_max?.[0] >= 6 ? ["🧴 Sun protection and a cap"] : []),
-              (current?.temperature_2m >= 30 ? ["💧 Water bottle"] : current?.temperature_2m <= 18 ? ["🧥 A light warm layer"] : ["👟 Comfortable shoes"]),
-              (current?.wind_speed_10m >= 25 ? ["💨 Secure loose items outdoors"] : [])
+            {(daily.precipitation_probability_max?.[0] >= 40 ? ["RAIN Umbrella or raincoat"] : ["Sunglasses Sunglasses if heading into bright sunshine"]).concat(
+              (daily.uv_index_max?.[0] >= 6 ? ["Sun protection Sun protection and a cap"] : []),
+              (current?.temperature_2m >= 30 ? ["Water Water bottle"] : current?.temperature_2m <= 18 ? ["Warm layer A light warm layer"] : ["Comfortable shoes Comfortable shoes"]),
+              (current?.wind_speed_10m >= 25 ? ["↝ Secure loose items outdoors"] : [])
             ).map((item) => <Text key={item} style={styles.featureText}>{item}</Text>)}
             <Text style={styles.featureHint}>Suggestions are based on the current forecast, not a safety guarantee.</Text>
           </View>
@@ -491,7 +491,7 @@ export default function App() {
               <Text style={styles.featureHint}>{dayLabel(date,i)}</Text>
               <Text style={styles.calendarIcon}>{describe(daily.weather_code[i])[1]}</Text>
               <Text style={styles.featureText}>{temp(daily.temperature_2m_max[i])}</Text>
-              <Text style={styles.featureHint}>☂ {number(daily.precipitation_probability_max?.[i],"%")}</Text>
+              <Text style={styles.featureHint}>RAIN {number(daily.precipitation_probability_max?.[i],"%")}</Text>
             </View>)}
           </ScrollView>
         </View>
@@ -552,7 +552,7 @@ export default function App() {
                 return <View style={styles.travelResult}>
                   <Text style={styles.sectionTitle}>Weather-related road conditions</Text>
                   <Text style={styles.featureText}>{risk}</Text>
-                  <Text style={styles.timestamp}>Weather-risk estimate only — not a live road-closure, flooding-depth or traffic feed. SkyCast cannot confirm that a road is passable.</Text>
+                  <Text style={styles.timestamp}>Weather-risk estimate only - not a live road-closure, flooding-depth or traffic feed. SkyCast cannot confirm that a road is passable.</Text>
                   <Text style={styles.sectionTitle}>Regional hazard alerts</Text>
                   {travelResult.alerts === null ? <Text style={styles.muted}>The GDACS alert feed could not be reached. Check the official local weather service.</Text> : travelResult.alerts.length ? travelResult.alerts.map((alert,i)=><View key={"gdacs-"+i} style={styles.alert}><Text style={styles.alertTitle}>{alert.level} · {alert.name}</Text><Text style={styles.alertText}>{alert.type} alert reported for {travelResult.city.country}. Check the source details and local instructions.</Text>{alert.details ? <Pressable onPress={()=>Linking.openURL(alert.details)} style={styles.mapLink}><Text style={styles.mapLinkText}>Read alert details →</Text></Pressable> : null}</View>) : <Text style={styles.muted}>No matching current GDACS flood, tropical-cyclone, drought or wildfire alert was found for this country in the latest feed. This does not mean there are no local weather warnings.</Text>}
                   <Text style={styles.timestamp}>Major regional hazard feed: Global Disaster Alert and Coordination System (GDACS). It does not replace local government weather warnings.</Text>
@@ -587,7 +587,7 @@ export default function App() {
         <Pressable accessibilityRole="button" onPress={() => place && Linking.openURL("https://www.openstreetmap.org/?mlat="+place.latitude+"&mlon="+place.longitude+"#map=10/"+place.latitude+"/"+place.longitude)} style={styles.toolButton}><Text style={styles.toolButtonTitle}>⌖  Open Live Weather Map</Text><Text style={styles.toolButtonHint}>View the selected city on an interactive map</Text></Pressable>
         <Pressable accessibilityRole="button" onPress={() => setPage("dashboard")} style={styles.toolButton}><Text style={styles.toolButtonTitle}>★  Saved cities & settings</Text><Text style={styles.toolButtonHint}>Manage favourite places and temperature units</Text></Pressable>
         <Pressable accessibilityRole="button" onPress={() => setPage("rain")} style={styles.toolButton}><Text style={styles.toolButtonTitle}>☀  Weather calendar</Text><Text style={styles.toolButtonHint}>See the seven-day outlook and daylight times</Text></Pressable>
-        <Pressable accessibilityRole="button" onPress={() => setPage("rain")} style={styles.toolButton}><Text style={styles.toolButtonTitle}>☂  Rain, Air & Sun</Text><Text style={styles.toolButtonHint}>Rain, air quality, UV and daylight</Text></Pressable>
+        <Pressable accessibilityRole="button" onPress={() => setPage("rain")} style={styles.toolButton}><Text style={styles.toolButtonTitle}>RAIN  Rain, Air & Sun</Text><Text style={styles.toolButtonHint}>Rain, air quality, UV and daylight</Text></Pressable>
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Device notifications</Text>
           <View style={styles.featureCard}>
@@ -632,17 +632,17 @@ function WeatherModeScene({mode,code,windSpeed=0,temperature,feelsLike,condition
       : sunny
         ? {sky:"#FFE9B8",ground:"#9ADBB0",accent:"#E9A25B",text:"#1D2B3A"}
         : {sky:"#1B2747",ground:"#31456F",accent:"#FFC46B",text:"#FFFFFF"};
-  const headline = night ? "A quieter kind of night" : rain ? "A little rain in the forecast" : sunny ? "Make room for sunshine" : "Your everyday weather";
-  const subtitle = night ? "The day is winding down." : rain ? "Keep an umbrella close today." : sunny ? "Bright skies are on the way." : "A fresh look at the day ahead.";
+  const headline = "Current conditions for " + (place || "your city");
+  const subtitle = "Live conditions and forecast details for your location.";
   useEffect(() => {
     if (reduced) { float.set(0); pulse.set(0); return; }
-    float.set(withRepeat(withTiming(-7,{duration:2300}),-1,true));
-    pulse.set(withRepeat(withTiming(1,{duration:1500}),-1,true));
+    float.set(0);
+    pulse.set(0);
     return () => { cancelAnimation(float); cancelAnimation(pulse); };
   },[reduced,float,pulse,mode]);
   const floatStyle = useAnimatedStyle(() => ({transform:[{translateY:float.get()}]}));
   const glowStyle = useAnimatedStyle(() => ({opacity:0.35+pulse.get()*0.2,transform:[{scale:0.92+pulse.get()*0.12}]}));
-  const symbol = rain ? "🌧️" : night ? "🌙" : sunny ? "☀️" : "⛅";
+  const symbol = rain ? "╱" : night ? "🌙" : sunny ? "○" : "◑";
   return <View style={[styles.modeScene,{backgroundColor:palette.sky}]}>
     <View style={[styles.modeGlow,{backgroundColor:palette.accent}]}/>
     <View style={styles.modeTopline}>
@@ -659,13 +659,13 @@ function WeatherModeScene({mode,code,windSpeed=0,temperature,feelsLike,condition
     <View style={[styles.modeHorizon,{backgroundColor:palette.ground}]}/>
     <View style={styles.modeBottom}>
       <View style={{flex:1}}>
-        <Text style={[styles.modeTemperature,{color:palette.text}]}>{temperature || "—"}</Text>
+        <Text style={[styles.modeTemperature,{color:palette.text}]}>{temperature || "-"}</Text>
         <Text style={[styles.modeCondition,{color:palette.text}]}>{condition || "Weather update"}</Text>
         <Text style={[styles.modeSubtitle,{color:palette.text}]}>{subtitle}</Text>
       </View>
       <View style={styles.modeFeels}>
         <Text style={[styles.modeFeelsLabel,{color:palette.accent}]}>FEELS LIKE</Text>
-        <Text style={[styles.modeFeelsValue,{color:palette.text}]}>{feelsLike || "—"}</Text>
+        <Text style={[styles.modeFeelsValue,{color:palette.text}]}>{feelsLike || "-"}</Text>
         <Text style={[styles.modeWind,{color:palette.text}]}>↝ {number(windSpeed," km/h")} wind</Text>
       </View>
     </View>
@@ -690,8 +690,8 @@ function WeatherScene({code,windSpeed=0}) {
   const action = storm ? "Froggy is watching the distant thunder." : snow ? "Froggy bundled up for a snowy day." : rain ? "Froggy is keeping dry under a little umbrella." : windy ? "A breezy day! Froggy is chasing a drifting leaf." : fog ? "Froggy is exploring the misty morning." : sunny ? "Froggy is enjoying a golden sunny day." : partlyCloudy ? "Froggy is playing between sun and clouds." : "Froggy is watching the clouds roll by.";
   useEffect(() => {
     if (reduced) { bob.set(0); drift.set(0); return; }
-    bob.set(withRepeat(withTiming(snow ? -6 : sunny ? -3 : -4,{duration:snow?900:sunny?1450:1100}),-1,true));
-    drift.set(withRepeat(withTiming(windy ? 13 : 6,{duration:windy?1700:2800}),-1,true));
+    bob.set(0);
+    drift.set(0);
     return () => { cancelAnimation(bob); cancelAnimation(drift); };
   },[reduced,bob,drift,snow,sunny,windy]);
   const frogStyle = useAnimatedStyle(() => ({transform:[{translateY:bob.get()}]}));
@@ -709,7 +709,7 @@ function WeatherScene({code,windSpeed=0}) {
     </View> : null}
     {snow ? <Text style={styles.sceneSnow}>✳   ❄   ✳</Text> : null}
     {storm ? <Text style={styles.sceneLightning}>ϟ</Text> : null}
-    {windy ? <Animated.Text style={[styles.windLeaf,cloudStyle]}>🍃</Animated.Text> : null}
+    {windy ? <Animated.Text style={[styles.windLeaf,cloudStyle]}>↝</Animated.Text> : null}
     {fog ? <View style={styles.fogBand}/> : null}
     <View style={[styles.sceneHillBack,{backgroundColor:hillBack}]}/>
     <View style={[styles.sceneHillFront,{backgroundColor:hillFront}]}/>
@@ -750,8 +750,8 @@ function CatWeatherScene({code,windSpeed=0}) {
   const caption = storm ? "A cozy shelter while the storm passes" : snow ? "A warm little camp on a snowy night" : rain ? "Listening to the rain by the fire" : windy ? "A breezy evening under the stars" : sunny ? "A golden evening at the campsite" : "A quiet night beneath the clouds";
   useEffect(() => {
     if (reduced) { catBob.set(0); firePulse.set(0); return; }
-    catBob.set(withRepeat(withTiming(-3,{duration:2100}),-1,true));
-    firePulse.set(withRepeat(withTiming(1,{duration:850}),-1,true));
+    catBob.set(0);
+    firePulse.set(0);
     return () => { cancelAnimation(catBob); cancelAnimation(firePulse); };
   },[reduced,catBob,firePulse]);
   const catStyle = useAnimatedStyle(() => ({transform:[{translateY:catBob.get()}]}));
@@ -801,7 +801,7 @@ function WeatherMotion({children}) {
       drift.set(0);
       return;
     }
-    drift.set(withRepeat(withTiming(-7, { duration: 2400 }), -1, true));
+    drift.set(0);
     return () => cancelAnimation(drift);
   }, [reducedMotion, drift]);
   const animatedStyle = useAnimatedStyle(() => ({
@@ -825,8 +825,8 @@ function SkyBuddy() {
   const sparkle = useSharedValue(0);
   useEffect(() => {
     if (reducedMotion) { bob.set(0); sparkle.set(0); return; }
-    bob.set(withRepeat(withTiming(-6, { duration: 1100 }), -1, true));
-    sparkle.set(withRepeat(withTiming(1, { duration: 900 }), -1, true));
+    bob.set(0);
+    sparkle.set(0);
     return () => { cancelAnimation(bob); cancelAnimation(sparkle); };
   }, [reducedMotion, bob, sparkle]);
   const buddyStyle = useAnimatedStyle(() => ({
@@ -1007,7 +1007,7 @@ const styles = StyleSheet.create({
   sceneCaption:{position:"absolute",bottom:7,left:10,right:10,alignItems:"center",zIndex:5},
   sceneCaptionText:{color:"#244B4A",fontSize:10,fontWeight:"800",backgroundColor:"rgba(255,255,255,0.88)",paddingHorizontal:12,paddingVertical:5,borderRadius:20,overflow:"hidden"},
   hero:{backgroundColor:"#FFFFFF",borderRadius:24,borderWidth:1,borderColor:"#D8E7F5",padding:spacing.md,shadowColor:"#2A6CA4",shadowOpacity:0.10,shadowRadius:16,shadowOffset:{width:0,height:5},elevation:3},
-  place:{color:colors.text,fontSize:16,fontWeight:"800"},favorite:{borderWidth:1,borderColor:colors.border,borderRadius:radius.full,paddingHorizontal:10,paddingVertical:7},favoriteText:{color:colors.accent,fontSize:11,fontWeight:"800"},
+  place:{color:colors.text,fontSize:16,fontWeight:"800"},favorite:{borderWidth:1,borderColor:colors.border,borderRadius:radius.md,paddingHorizontal:10,paddingVertical:7},favoriteText:{color:colors.accent,fontSize:11,fontWeight:"800"},
   heroIcon:{fontSize:48},heroIconMotion:{width:94,height:94,alignItems:"center",justifyContent:"center",borderRadius:30,backgroundColor:"#E6D8C3",borderWidth:1,borderColor:"#C7B394",shadowColor:"#B66A45",shadowOpacity:0.16,shadowRadius:14,shadowOffset:{width:0,height:5},elevation:4},temperature:{color:"#287FC5",fontSize:76,fontWeight:"300",letterSpacing:-3,marginTop:12},
   condition:{color:colors.text,fontSize:17,fontWeight:"700",marginTop:-4},metrics:{flexDirection:"row",borderTopWidth:1,borderTopColor:colors.border,marginTop:spacing.lg,paddingTop:spacing.md,justifyContent:"space-between",gap:8},
   metric:{gap:5,flex:1},metricLabel:{color:colors.muted,fontSize:9,letterSpacing:1,fontWeight:"800"},metricValue:{color:colors.text,fontSize:13,fontWeight:"700"},
@@ -1023,7 +1023,7 @@ const styles = StyleSheet.create({
   forecastRow:{minHeight:56,flexDirection:"row",alignItems:"center",gap:6,borderBottomWidth:1,borderBottomColor:colors.border},
   day:{width:40,color:colors.text,fontSize:12,fontWeight:"700"},forecastIcon:{width:23,fontSize:17,textAlign:"center"},forecastCondition:{flex:1,color:colors.muted,fontSize:10},
   high:{color:colors.text,fontSize:12,fontWeight:"700",width:26,textAlign:"right"},low:{color:colors.muted,fontSize:12,width:26,textAlign:"right"},rainChance:{color:colors.accent,fontSize:9,width:42,textAlign:"right"},
-  chips:{gap:8},chip:{backgroundColor:colors.panel,borderWidth:1,borderColor:colors.border,borderRadius:radius.full,paddingHorizontal:14,paddingVertical:9},chipText:{color:colors.text,fontSize:12,fontWeight:"700"},
+  chips:{gap:8},chip:{backgroundColor:colors.panel,borderWidth:1,borderColor:colors.border,borderRadius:radius.md,paddingHorizontal:14,paddingVertical:9},chipText:{color:colors.text,fontSize:12,fontWeight:"700"},
   compareButton:{backgroundColor:colors.navy,borderRadius:radius.sm,minHeight:46,alignItems:"center",justifyContent:"center",padding:spacing.md,borderWidth:1,borderColor:colors.brass},disabled:{opacity:.5},
   compareRow:{flexDirection:"row",alignItems:"center",justifyContent:"space-between",backgroundColor:colors.panel,borderRadius:radius.md,padding:spacing.md,gap:8},
   compareCondition:{color:colors.muted,fontSize:10,flex:1},compareTemp:{color:colors.text,fontSize:16,fontWeight:"800"},
