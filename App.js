@@ -353,8 +353,8 @@ export default function App() {
       </View>
       {page !== "home" ? <Text style={styles.pageHeading}>{({rain:"Rain, Air & Sun",travel:"Travel Planner",forecast:"Your forecast",radio:"Forecast FM",explore:"Explore",intelligence:"Weather Intelligence",dashboard:"Personal Dashboard",more:"More tools"})[page]}</Text> : null}
 {page === "home" ? <>
-      <Text style={styles.heading}>Weather, in a clearer light.</Text>
-      <Text style={styles.subheading}>A fresh, thoughtful look at the sky around you.</Text>
+      <Text style={styles.heading}>Weather decisions for {place?.name || "your city"}.</Text>
+      <Text style={styles.subheading}>Practical guidance for rain, outdoor plans and changing conditions.</Text>
       <View style={styles.searchRow}>
         <TextInput accessibilityLabel="Search city" value={query} onChangeText={setQuery} onSubmitEditing={() => loadCity(query)} returnKeyType="search" placeholder="Search any city" placeholderTextColor={colors.muted} style={styles.input}/>
         <Pressable accessibilityRole="button" onPress={() => loadCity(query)} style={styles.button}><Text style={styles.buttonText}>Search</Text></Pressable>
@@ -633,7 +633,7 @@ export default function App() {
       {[
         ["home","Home","⌂"],["forecast","Forecast","◷"],["explore","Explore","◇"],["radio","Radio","◉"],["more","More","•••"]
       ].map(([key,label,symbol]) => {
-        const selected = key === page || (key === "explore" && ["rain","travel"].includes(page)) || (key === "more" && page === "dashboard");
+        const selected = key === page || (key === "explore" && ["rain","travel","intelligence"].includes(page)) || (key === "more" && page === "dashboard");
         return <Pressable key={key} accessibilityRole="button" accessibilityState={{selected}} onPress={()=>setPage(key)} style={styles.bottomNavItem}>
           <Text style={[styles.bottomNavIcon,selected&&styles.bottomNavIconActive]}>{symbol}</Text>
           <Text style={[styles.bottomNavLabel,selected&&styles.bottomNavLabelActive]}>{label}</Text>
@@ -651,12 +651,12 @@ function WeatherModeScene({mode,code,windSpeed=0,temperature,feelsLike,condition
   const night = mode === "night";
   const sunny = mode === "sunny";
   const palette = night
-    ? {sky:"#2B2140",ground:"#51436A",accent:"#E9A25B",text:"#FFFFFF"}
+    ? {sky:"#14263F",ground:"#263D5A",accent:"#E7B96D",text:"#FFFFFF"}
     : rain
       ? {sky:"#2F4B69",ground:"#40607F",accent:"#D6E8FF",text:"#FFFFFF"}
       : sunny
         ? {sky:"#FFE9B8",ground:"#9ADBB0",accent:"#E9A25B",text:"#1D2B3A"}
-        : {sky:"#1B2747",ground:"#31456F",accent:"#FFC46B",text:"#FFFFFF"};
+        : {sky:"#203E5B",ground:"#365A78",accent:"#E7B96D",text:"#FFFFFF"};
   const headline = "Current conditions for " + (place || "your city");
   const subtitle = "Live conditions and forecast details for your location.";
   useEffect(() => {
