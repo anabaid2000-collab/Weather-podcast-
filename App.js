@@ -49,7 +49,23 @@ async function getWeather(city) {
     const index = matchingIndex < 0 ? Math.max(0, times.length - 1) : matchingIndex;
     air = { aqi: result.hourly?.us_aqi?.[index], pm25: result.hourly?.pm2_5?.[index], pm10: result.hourly?.pm10?.[index], pollen: { alder: result.hourly?.alder_pollen?.[index], birch: result.hourly?.birch_pollen?.[index], grass: result.hourly?.grass_pollen?.[index], mugwort: result.hourly?.mugwort_pollen?.[index], olive: result.hourly?.olive_pollen?.[index], ragweed: result.hourly?.ragweed_pollen?.[index] } };
   }
-  return { forecast, air };
+  let climate = null;
+  try {
+    const today = forecast.current.time.slice(0, 10);
+    const start = String(Number(today.slice(0, 4)) - 30) + today.slice(4);
+    const archiveUrl = "https://archive-api.open-meteo.com/v1/archive?latitude=" + city.latitude + "&longitude=" + city.longitude + "&start_date=" + start + "&end_date=" + today + "&daily=temperature_2m_mean&timezone=auto";
+    const archiveResponse = await fetch(archiveUrl);
+    if (archiveResponse.ok) {
+      const archive = await archiveResponse.json();
+      const month = today.slice(5, 7);
+      const values = (archive.daily?.time || []).map((date, index) => ({ date, value: Number(archive.daily?.temperature_2m_mean?.[index]) })).filter((item) => item.date?.slice(5, 7) === month && Number.isFinite(item.value));
+      if (values.length) {
+        const mean = values.reduce((sum, item) => sum + item.value, 0) / values.length;
+        climate = { monthlyMean: mean, sampleDays: values.length, periodStart: start, periodEnd: today, currentMean: forecast.daily?.temperature_2m_mean?.[0] ?? forecast.current.temperature_2m };
+      }
+    }
+  } catch {}
+  return { forecast, air, climate };
 }
 
 export default function App() {
