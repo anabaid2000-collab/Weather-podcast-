@@ -43,7 +43,19 @@ export default function ForecastFM({place,forecast,air,unit}) {
   const hourIndex=(hourly.time||[]).findIndex(t=>t>=(current.time||""));
   const nextRain=(hourly.precipitation_probability||[]).slice(Math.max(0,hourIndex),Math.max(0,hourIndex)+12);
   let result;
-  if(/tomorrow|next day/.test(q)) result="Tomorrow in "+city+": "+(codes[daily.weather_code?.[1]]||"forecast unavailable")+", high "+convert(daily.temperature_2m_max?.[1])+"°"+u+", low "+convert(daily.temperature_2m_min?.[1])+"°"+u+", rain probability "+tomorrowRain+"%.";
+  if(/best day|hike|hiking|picnic|outdoor plan|outdoor activity/.test(q)) {
+   const candidates=(daily.time||[]).map((date,index)=>{
+    const rainChance=Number(daily.precipitation_probability_max?.[index]??100);
+    const uvValue=Number(daily.uv_index_max?.[index]??5);
+    const windValue=Number(daily.wind_speed_10m_max?.[index]??15);
+    const high=Number(daily.temperature_2m_max?.[index]??25);
+    const comfortPenalty=Math.max(0,Math.abs(high-22)-9)*2;
+    return {date,score:Math.max(0,Math.min(100,Math.round(100-rainChance*.55-Math.max(0,windValue-18)*1.2-Math.max(0,uvValue-7)*2-comfortPenalty)))};
+   }).filter(item=>item.date);
+   const best=candidates.sort((a,b)=>b.score-a.score)[0];
+   result=best?"The best-looking day for an outdoor plan in "+city+" is "+best.date+", with a planning score of "+best.score+"/100. This compares forecast rain, wind, UV and daytime high temperature; it is not a guarantee.":"There is not enough daily forecast data to compare outdoor days.";
+  }
+  else if(/tomorrow|next day/.test(q)) result="Tomorrow in "+city+": "+(codes[daily.weather_code?.[1]]||"forecast unavailable")+", high "+convert(daily.temperature_2m_max?.[1])+"°"+u+", low "+convert(daily.temperature_2m_min?.[1])+"°"+u+", rain probability "+tomorrowRain+"%.";
   else if(/week|7 day|seven day|weekend/.test(q)) result=(daily.time||[]).slice(0,7).map((d,i)=>d+": "+(codes[daily.weather_code?.[i]]||"variable")+", "+convert(daily.temperature_2m_min?.[i])+"-"+convert(daily.temperature_2m_max?.[i])+"°"+u+", rain "+(daily.precipitation_probability_max?.[i]??"-")+"%.").join("\n");
   else if(/rain|shower|umbrella|precipitation/.test(q)) result="Rain outlook for "+city+": "+todayRain+"% maximum probability today. "+(nextRain.length?"The next 12 hourly probabilities are "+nextRain.join(", ")+" percent. ":"")+(todayRain>=60?"Rain is likely enough that carrying rain protection is sensible.":"Rain is not currently the dominant signal, but check again before leaving.");
   else if(/air quality|aqi|pollution|pm2|pm10/.test(q)) result=Number.isFinite(air?.aqi)?"The available US AQI estimate is "+Math.round(air.aqi)+", PM2.5 "+n(air.pm25)+" and PM10 "+n(air.pm10)+" µg/m³.":"Air-quality data is unavailable right now for this location.";
