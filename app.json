@@ -24,6 +24,10 @@
     },
     "plugins": [
       "expo-notifications"
-    ]
+    ],
+    "web": {
+      "bundler": "metro",
+      "output": "static"
+    }
   }
 }
