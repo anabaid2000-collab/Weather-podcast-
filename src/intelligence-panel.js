@@ -20,7 +20,7 @@ const styles = {
   warning: { color: colors.warning, fontSize: 12, fontWeight: "700" }
 };
 
-export default function IntelligencePanel({ forecast, air, place, onAsk, onReport, reportStatus, reports = [] }) {
+export default function IntelligencePanel({ forecast, air, climate, place, onAsk, onReport, reportStatus, reports = [] }) {
   const decisions = getWeatherDecisions(forecast);
   const scores = getActivityScores(forecast);
   const safety = getSafetyGuidance(forecast?.current?.weather_code ?? -1);
@@ -64,6 +64,13 @@ export default function IntelligencePanel({ forecast, air, place, onAsk, onRepor
       <Text style={styles.body}>Atmospheric pressure: {Number.isFinite(current.pressure_msl) ? Math.round(current.pressure_msl) + " hPa" : "Unavailable"}{pressureChange !== null ? " · 6-hour change " + (pressureChange > 0 ? "+" : "") + pressureChange + " hPa" : ""}</Text>
       {pollen.length ? pollen.map(([name,value]) => <Text key={name} style={styles.body}>{name.replace("_"," ")} pollen: {Math.round(value)}</Text>) : <Text style={styles.body}>Pollen readings are unavailable for this location or time.</Text>}
       <Text style={styles.warning}>This is environmental information, not medical advice. SkyCast does not predict migraines, joint pain or individual symptoms.</Text>
+    </View>
+    <View style={styles.section}>
+      <Text style={styles.label}>CLIMATE CONTEXT</Text>
+      <Text style={styles.title}>Compared with the historical climate</Text>
+      {climate ? <Text style={styles.body}>Current temperature: {Number(climate.currentMean).toFixed(1)}°C. Historical monthly mean: {Number(climate.monthlyMean).toFixed(1)}°C across {climate.sampleDays} daily observations in the available 30-year archive window.</Text> : <Text style={styles.body}>Historical climate comparison is temporarily unavailable for this location.</Text>}
+      {climate ? <Text style={styles.answer}>{(Number(climate.currentMean) - Number(climate.monthlyMean) >= 0 ? "+" : "") + (Number(climate.currentMean) - Number(climate.monthlyMean)).toFixed(1)}°C versus the historical monthly mean</Text> : null}
+      <Text style={styles.warning}>This compares today's current temperature with a historical monthly average, not a formal climate-normal report. The archive window and available observations can vary by location.</Text>
     </View>
     <View style={styles.section}>
       <Text style={styles.label}>COMMUNITY WEATHER REPORTS</Text>
