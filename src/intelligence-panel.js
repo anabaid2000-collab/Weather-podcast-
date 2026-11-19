@@ -20,10 +20,14 @@ const styles = {
   warning: { color: colors.warning, fontSize: 12, fontWeight: "700" }
 };
 
-export default function IntelligencePanel({ forecast, place, onAsk, onReport, reportStatus, reports = [] }) {
+export default function IntelligencePanel({ forecast, air, place, onAsk, onReport, reportStatus, reports = [] }) {
   const decisions = getWeatherDecisions(forecast);
   const scores = getActivityScores(forecast);
   const safety = getSafetyGuidance(forecast?.current?.weather_code ?? -1);
+  const current = forecast?.current || {};
+  const pollen = Object.entries(air?.pollen || {}).filter(([, value]) => Number.isFinite(value));
+  const pressureValues = (forecast?.hourly?.pressure_msl || []).slice(0, 6).filter(Number.isFinite);
+  const pressureChange = pressureValues.length > 1 ? Math.round(pressureValues[pressureValues.length - 1] - pressureValues[0]) : null;
   return <View style={styles.wrap}>
     <View style={styles.section}>
       <Text style={styles.label}>WEATHER DECISIONS · {place?.name || "YOUR LOCATION"}</Text>
@@ -52,6 +56,14 @@ export default function IntelligencePanel({ forecast, place, onAsk, onReport, re
         <Text style={styles.body}>{item.reason}</Text>
       </View>)}
       <Text style={styles.body}>These are transparent planning estimates, not safety guarantees. Check local conditions before activities.</Text>
+    </View>
+    <View style={styles.section}>
+      <Text style={styles.label}>HEALTH AND ENVIRONMENT</Text>
+      <Text style={styles.title}>Outdoor exposure snapshot</Text>
+      <Text style={styles.body}>UV index today: {Number.isFinite(forecast?.daily?.uv_index_max?.[0]) ? Math.round(forecast.daily.uv_index_max[0]) : "Unavailable"} · US AQI: {Number.isFinite(air?.aqi) ? Math.round(air.aqi) : "Unavailable"}</Text>
+      <Text style={styles.body}>Atmospheric pressure: {Number.isFinite(current.pressure_msl) ? Math.round(current.pressure_msl) + " hPa" : "Unavailable"}{pressureChange !== null ? " · 6-hour change " + (pressureChange > 0 ? "+" : "") + pressureChange + " hPa" : ""}</Text>
+      {pollen.length ? pollen.map(([name,value]) => <Text key={name} style={styles.body}>{name.replace("_"," ")} pollen: {Math.round(value)}</Text>) : <Text style={styles.body}>Pollen readings are unavailable for this location or time.</Text>}
+      <Text style={styles.warning}>This is environmental information, not medical advice. SkyCast does not predict migraines, joint pain or individual symptoms.</Text>
     </View>
     <View style={styles.section}>
       <Text style={styles.label}>COMMUNITY WEATHER REPORTS</Text>
