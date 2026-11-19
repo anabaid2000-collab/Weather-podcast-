@@ -402,7 +402,7 @@ export default function App() {
       : current && daily ? <>
         {error ? <Text style={styles.inlineError}>{error}</Text> : null}
 {page === "radio" ? <ForecastFM place={place} forecast={data.forecast} air={data.air} unit={unit}/> : null}
-{page === "intelligence" ? <IntelligencePanel forecast={data.forecast} air={data.air} place={place} onAsk={() => setPage("radio")} onReport={reportWeather} reportStatus={communityStatus} reports={communityReports}/> : null}
+{page === "intelligence" ? <IntelligencePanel forecast={data.forecast} air={data.air} climate={data.climate} place={place} onAsk={() => setPage("radio")} onReport={reportWeather} reportStatus={communityStatus} reports={communityReports}/> : null}
  {page === "forecast" ? <View style={styles.section}>
   <Text style={styles.sectionTitle}>The week ahead</Text>
   <Text style={styles.muted}>A seven-day view for {place?.name || "your location"}.</Text>
