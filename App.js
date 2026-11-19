@@ -4,7 +4,7 @@ import { ActivityIndicator, AppState, Linking, Pressable, ScrollView, StatusBar,
 import Animated, { cancelAnimation, useAnimatedStyle, useReducedMotion, useSharedValue, withRepeat, withTiming } from "react-native-reanimated";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { auth, db } from "./src/firebase";
-import { addDoc, collection, doc, getDoc, serverTimestamp, setDoc } from "firebase/firestore";
+import { addDoc, collection, doc, getDoc, getDocs, limit, query, serverTimestamp, setDoc, where } from "firebase/firestore";
 import { signInAnonymously } from "firebase/auth";
 import { registerForPushNotificationsAsync } from "./src/notifications";
 import { colors, spacing, radius } from "./src/theme";
@@ -73,6 +73,7 @@ export default function App() {
   const [travelError, setTravelError] = useState("");
   const [offlineCopy, setOfflineCopy] = useState(false);
   const [communityStatus, setCommunityStatus] = useState("");
+  const [communityReports, setCommunityReports] = useState([]);
   const [page, setPage] = useState("home");
   const temp = (value) => number(unit === "F" && Number.isFinite(value) ? value * 9 / 5 + 32 : value, "°" + unit);
 
@@ -262,6 +263,20 @@ export default function App() {
 
 
 
+  useEffect(() => {
+    let active = true;
+    if (!place?.name) { setCommunityReports([]); return () => { active = false; }; }
+    const loadCommunityReports = async () => {
+      try {
+        const reportsQuery = query(collection(db, "communityWeatherReports"), where("city", "==", place.name), limit(10));
+        const snapshot = await getDocs(reportsQuery);
+        if (active) setCommunityReports(snapshot.docs.map((item) => ({ id: item.id, ...item.data() })));
+      } catch { if (active) setCommunityReports([]); }
+    };
+    void loadCommunityReports();
+    return () => { active = false; };
+  }, [place?.name]);
+
   const reportWeather = async (observation) => {
     if (!place) return;
     if (!firebaseUserId) { setCommunityStatus("Community reports require a temporary Firebase connection. Try again when connected."); return; }
@@ -273,7 +288,6 @@ export default function App() {
         country: place.country || null,
         latitudeRounded: Number(Number(place.latitude).toFixed(2)),
         longitudeRounded: Number(Number(place.longitude).toFixed(2)),
-        userId: firebaseUserId,
         source: "SkyCast community report",
         createdAt: serverTimestamp()
       });
@@ -372,7 +386,7 @@ export default function App() {
       : current && daily ? <>
         {error ? <Text style={styles.inlineError}>{error}</Text> : null}
 {page === "radio" ? <ForecastFM place={place} forecast={data.forecast} air={data.air} unit={unit}/> : null}
-{page === "intelligence" ? <IntelligencePanel forecast={data.forecast} place={place} onAsk={() => setPage("radio")} onReport={reportWeather} reportStatus={communityStatus}/> : null}
+{page === "intelligence" ? <IntelligencePanel forecast={data.forecast} place={place} onAsk={() => setPage("radio")} onReport={reportWeather} reportStatus={communityStatus} reports={communityReports}/> : null}
  {page === "forecast" ? <View style={styles.section}>
   <Text style={styles.sectionTitle}>The week ahead</Text>
   <Text style={styles.muted}>A seven-day view for {place?.name || "your location"}.</Text>
