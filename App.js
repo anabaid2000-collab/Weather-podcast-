@@ -90,6 +90,9 @@ export default function App() {
   const [offlineCopy, setOfflineCopy] = useState(false);
   const [communityStatus, setCommunityStatus] = useState("");
   const [communityReports, setCommunityReports] = useState([]);
+  const [routeDestination, setRouteDestination] = useState("");
+  const [routeResult, setRouteResult] = useState(null);
+  const [routeStatus, setRouteStatus] = useState("");
   const [page, setPage] = useState("home");
   const temp = (value) => number(unit === "F" && Number.isFinite(value) ? value * 9 / 5 + 32 : value, "°" + unit);
 
@@ -293,6 +296,36 @@ export default function App() {
     return () => { active = false; };
   }, [place?.name]);
 
+  const checkRouteWeather = async () => {
+    const destinationName = routeDestination.trim();
+    if (!destinationName) { setRouteStatus("Enter a destination city."); return; }
+    if (!place) { setRouteStatus("Your starting city is not available."); return; }
+    setRouteStatus("Checking weather at both cities…");
+    setRouteResult(null);
+    try {
+      const destination = await getCity(destinationName);
+      const destinationData = await getWeather(destination);
+      const summarize = (snapshot) => {
+        const c = snapshot?.forecast?.current || {};
+        const d = snapshot?.forecast?.daily || {};
+        return {
+          temperature: c.temperature_2m,
+          code: c.weather_code,
+          rain: d.precipitation_probability_max?.[0],
+          wind: c.wind_speed_10m,
+          visibility: c.visibility
+        };
+      };
+      setRouteResult({
+        origin: { name: place.name, weather: summarize(data) },
+        destination: { name: destination.name, weather: summarize(destinationData) }
+      });
+      setRouteStatus("Weather snapshots loaded for both cities.");
+    } catch (routeError) {
+      setRouteStatus(routeError.message || "Could not compare route weather.");
+    }
+  };
+
   const reportWeather = async (observation) => {
     if (!place) return;
     if (!firebaseUserId) { setCommunityStatus("Community reports require a temporary Firebase connection. Try again when connected."); return; }
@@ -402,7 +435,7 @@ export default function App() {
       : current && daily ? <>
         {error ? <Text style={styles.inlineError}>{error}</Text> : null}
 {page === "radio" ? <ForecastFM place={place} forecast={data.forecast} air={data.air} unit={unit}/> : null}
-{page === "intelligence" ? <IntelligencePanel forecast={data.forecast} air={data.air} climate={data.climate} place={place} onAsk={() => setPage("radio")} onReport={reportWeather} reportStatus={communityStatus} reports={communityReports}/> : null}
+{page === "intelligence" ? <IntelligencePanel forecast={data.forecast} air={data.air} climate={data.climate} place={place} onAsk={() => setPage("radio")} onReport={reportWeather} reportStatus={communityStatus} reports={communityReports} routeDestination={routeDestination} onRouteDestinationChange={setRouteDestination} onCheckRoute={checkRouteWeather} routeResult={routeResult} routeStatus={routeStatus}/> : null}
  {page === "forecast" ? <View style={styles.section}>
   <Text style={styles.sectionTitle}>The week ahead</Text>
   <Text style={styles.muted}>A seven-day view for {place?.name || "your location"}.</Text>
