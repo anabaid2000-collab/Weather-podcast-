@@ -20,7 +20,7 @@ const styles = {
   warning: { color: colors.warning, fontSize: 12, fontWeight: "700" }
 };
 
-export default function IntelligencePanel({ forecast, place, onAsk, onReport, reportStatus }) {
+export default function IntelligencePanel({ forecast, place, onAsk, onReport, reportStatus, reports = [] }) {
   const decisions = getWeatherDecisions(forecast);
   const scores = getActivityScores(forecast);
   const safety = getSafetyGuidance(forecast?.current?.weather_code ?? -1);
@@ -62,6 +62,12 @@ export default function IntelligencePanel({ forecast, place, onAsk, onReport, re
         <Pressable accessibilityRole="button" onPress={() => onReport?.("not_raining")} style={styles.button}><Text style={styles.buttonText}>Not raining</Text></Pressable>
       </View>
       {reportStatus ? <Text style={styles.body}>{reportStatus}</Text> : null}
+      <View style={{height:1,backgroundColor:colors.border}}/>
+      <Text style={styles.label}>RECENT CITY REPORTS</Text>
+      {reports.length ? reports.slice(0,5).map((report) => <View key={report.id} style={{gap:2}}>
+        <Text style={{color:colors.text,fontSize:12,fontWeight:"700"}}>{report.observation === "raining" ? "Rain reported" : "No rain reported"}</Text>
+        <Text style={styles.body}>{report.createdAt?.toDate ? report.createdAt.toDate().toLocaleString() : "Recently submitted"} · Community observation, not an official measurement.</Text>
+      </View>) : <Text style={styles.body}>No recent community observations for this city yet.</Text>}
     </View>
     <View style={styles.section}>
       <Text style={styles.label}>SEVERE WEATHER SAFETY</Text>
