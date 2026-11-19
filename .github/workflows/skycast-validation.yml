@@ -2,7 +2,7 @@ name: SkyCast Expo validation
 
 on:
   push:
-    branches: [main]
+    branches: [main, skycast-vintage-weather-bureau]
   pull_request:
     branches: [main]
 

@@ -24,6 +24,13 @@
     },
     "plugins": [
       "expo-notifications"
-    ]
+    ],
+    "web": {
+      "bundler": "metro",
+      "output": "single"
+    },
+    "experiments": {
+      "baseUrl": "/Weather-podcast-"
+    }
   }
 }

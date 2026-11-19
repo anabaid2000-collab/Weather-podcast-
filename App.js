@@ -4,25 +4,26 @@ import { ActivityIndicator, AppState, Linking, Pressable, ScrollView, StatusBar,
 import Animated, { cancelAnimation, useAnimatedStyle, useReducedMotion, useSharedValue, withRepeat, withTiming } from "react-native-reanimated";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { auth, db } from "./src/firebase";
-import { doc, getDoc, serverTimestamp, setDoc } from "firebase/firestore";
+import { addDoc, collection, doc, getDoc, getDocs, limit, query, serverTimestamp, setDoc, where } from "firebase/firestore";
 import { signInAnonymously } from "firebase/auth";
 import { registerForPushNotificationsAsync } from "./src/notifications";
 import { colors, spacing, radius } from "./src/theme";
 import ForecastFM from "./src/forecast-fm"; // native Forecast FM integration
+import IntelligencePanel from "./src/intelligence-panel";
 
 const FAVORITES_KEY = "skycast.favoriteCities.v1";
 const weatherCodes = {
-  0:["Clear sky","☀️"],1:["Mainly clear","🌤️"],2:["Partly cloudy","⛅"],3:["Overcast","☁️"],
-  45:["Fog","🌫️"],48:["Rime fog","🌫️"],51:["Light drizzle","🌦️"],53:["Drizzle","🌦️"],55:["Heavy drizzle","🌧️"],
-  56:["Freezing drizzle","🌧️"],57:["Freezing drizzle","🌧️"],61:["Light rain","🌦️"],63:["Rain","🌧️"],65:["Heavy rain","🌧️"],
-  66:["Freezing rain","🌧️"],67:["Heavy freezing rain","🌧️"],71:["Light snow","🌨️"],73:["Snow","🌨️"],75:["Heavy snow","❄️"],
-  77:["Snow grains","🌨️"],80:["Rain showers","🌦️"],81:["Rain showers","🌧️"],82:["Heavy showers","⛈️"],
-  85:["Snow showers","🌨️"],86:["Heavy snow showers","❄️"],95:["Thunderstorm","⛈️"],96:["Thunderstorm with hail","⛈️"],99:["Severe thunderstorm","⛈️"]
+  0:["Clear sky","○"],1:["Mainly clear","◐"],2:["Partly cloudy","◑"],3:["Overcast","≋"],
+  45:["Fog","≋"],48:["Rime fog","≋"],51:["Light drizzle","╱"],53:["Drizzle","╱"],55:["Heavy drizzle","╱"],
+  56:["Freezing drizzle","╱"],57:["Freezing drizzle","╱"],61:["Light rain","╱"],63:["Rain","╱"],65:["Heavy rain","╱"],
+  66:["Freezing rain","╱"],67:["Heavy freezing rain","╱"],71:["Light snow","*"],73:["Snow","*"],75:["Heavy snow","*"],
+  77:["Snow grains","*"],80:["Rain showers","╱"],81:["Rain showers","╱"],82:["Heavy showers","ϟ"],
+  85:["Snow showers","*"],86:["Heavy snow showers","*"],95:["Thunderstorm","ϟ"],96:["Thunderstorm with hail","ϟ"],99:["Severe thunderstorm","ϟ"]
 };
-const describe = (code) => weatherCodes[code] || ["Changing conditions","🌡️"];
+const describe = (code) => weatherCodes[code] || ["Changing conditions","°"];
 const dayLabel = (date, index) => index === 0 ? "Today" : new Date(date + "T12:00:00").toLocaleDateString(undefined,{weekday:"short"});
-const number = (value, suffix="") => Number.isFinite(value) ? Math.round(value) + suffix : "—";
-const clockLabel = (value) => value?.split("T")?.[1]?.slice(0,5) || "—";
+const number = (value, suffix="") => Number.isFinite(value) ? Math.round(value) + suffix : "-";
+const clockLabel = (value) => value?.split("T")?.[1]?.slice(0,5) || "-";
 
 async function getCity(name) {
   const response = await fetch("https://geocoding-api.open-meteo.com/v1/search?name=" + encodeURIComponent(name) + "&count=1&language=en&format=json");
@@ -33,10 +34,10 @@ async function getCity(name) {
 }
 async function getWeather(city) {
   const base = "https://api.open-meteo.com/v1/forecast?latitude=" + city.latitude + "&longitude=" + city.longitude;
-  const forecastUrl = base + "&current=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,weather_code,wind_speed_10m&hourly=temperature_2m,precipitation_probability,uv_index,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,uv_index_max,sunrise,sunset&timezone=auto&forecast_days=7";
+  const forecastUrl = base + "&current=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,weather_code,wind_speed_10m,wind_direction_10m,pressure_msl,cloud_cover,visibility&hourly=temperature_2m,precipitation_probability,uv_index,weather_code,relative_humidity_2m,wind_speed_10m,visibility,cloud_cover,pressure_msl&minutely_15=precipitation,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,uv_index_max,wind_speed_10m_max,sunrise,sunset&timezone=auto&forecast_days=7";
   const [forecastResponse, airResponse] = await Promise.all([
     fetch(forecastUrl),
-    fetch("https://air-quality-api.open-meteo.com/v1/air-quality?latitude=" + city.latitude + "&longitude=" + city.longitude + "&hourly=us_aqi,pm2_5,pm10&timezone=auto&forecast_days=1").catch(() => null)
+    fetch("https://air-quality-api.open-meteo.com/v1/air-quality?latitude=" + city.latitude + "&longitude=" + city.longitude + "&hourly=us_aqi,pm2_5,pm10,alder_pollen,birch_pollen,grass_pollen,mugwort_pollen,olive_pollen,ragweed_pollen&timezone=auto&forecast_days=1").catch(() => null)
   ]);
   if (!forecastResponse.ok) throw new Error("Weather service is temporarily unavailable.");
   const forecast = await forecastResponse.json();
@@ -46,9 +47,25 @@ async function getWeather(city) {
     const times = result.hourly?.time || [];
     const matchingIndex = times.findIndex((time) => time >= forecast.current.time);
     const index = matchingIndex < 0 ? Math.max(0, times.length - 1) : matchingIndex;
-    air = { aqi: result.hourly?.us_aqi?.[index], pm25: result.hourly?.pm2_5?.[index], pm10: result.hourly?.pm10?.[index] };
+    air = { aqi: result.hourly?.us_aqi?.[index], pm25: result.hourly?.pm2_5?.[index], pm10: result.hourly?.pm10?.[index], pollen: { alder: result.hourly?.alder_pollen?.[index], birch: result.hourly?.birch_pollen?.[index], grass: result.hourly?.grass_pollen?.[index], mugwort: result.hourly?.mugwort_pollen?.[index], olive: result.hourly?.olive_pollen?.[index], ragweed: result.hourly?.ragweed_pollen?.[index] } };
   }
-  return { forecast, air };
+  let climate = null;
+  try {
+    const today = forecast.current.time.slice(0, 10);
+    const start = String(Number(today.slice(0, 4)) - 30) + today.slice(4);
+    const archiveUrl = "https://archive-api.open-meteo.com/v1/archive?latitude=" + city.latitude + "&longitude=" + city.longitude + "&start_date=" + start + "&end_date=" + today + "&daily=temperature_2m_mean&timezone=auto";
+    const archiveResponse = await fetch(archiveUrl);
+    if (archiveResponse.ok) {
+      const archive = await archiveResponse.json();
+      const month = today.slice(5, 7);
+      const values = (archive.daily?.time || []).map((date, index) => ({ date, value: Number(archive.daily?.temperature_2m_mean?.[index]) })).filter((item) => item.date?.slice(5, 7) === month && Number.isFinite(item.value));
+      if (values.length) {
+        const mean = values.reduce((sum, item) => sum + item.value, 0) / values.length;
+        climate = { monthlyMean: mean, sampleDays: values.length, periodStart: start, periodEnd: today, currentMean: forecast.daily?.temperature_2m_mean?.[0] ?? forecast.current.temperature_2m };
+      }
+    }
+  } catch {}
+  return { forecast, air, climate };
 }
 
 export default function App() {
@@ -71,6 +88,11 @@ export default function App() {
   const [travelLoading, setTravelLoading] = useState(false);
   const [travelError, setTravelError] = useState("");
   const [offlineCopy, setOfflineCopy] = useState(false);
+  const [communityStatus, setCommunityStatus] = useState("");
+  const [communityReports, setCommunityReports] = useState([]);
+  const [routeDestination, setRouteDestination] = useState("");
+  const [routeResult, setRouteResult] = useState(null);
+  const [routeStatus, setRouteStatus] = useState("");
   const [page, setPage] = useState("home");
   const temp = (value) => number(unit === "F" && Number.isFinite(value) ? value * 9 / 5 + 32 : value, "°" + unit);
 
@@ -233,13 +255,96 @@ export default function App() {
     setTravelLoading(true); setTravelError(""); setTravelResult(null);
     try {
       const city = await getCity(travelQuery);
-      const result = await getWeather(city);
-      setTravelResult({ city, data: result });
+      const [result, alertResponse] = await Promise.all([
+        getWeather(city),
+        fetch("https://www.gdacs.org/gdacsapi/api/events/geteventlist/EVENTS4APP").catch(() => null)
+      ]);
+      let alerts = null;
+      if (alertResponse?.ok) {
+        const feed = await alertResponse.json();
+        const features = Array.isArray(feed?.features) ? feed.features : [];
+        const country = String(city.country || "").toLowerCase();
+        alerts = features.filter((feature) => {
+          const p = feature?.properties || {};
+          const eventType = String(p.eventtype || p.eventType || "").toUpperCase();
+          const countryValue = Array.isArray(p.country) ? p.country.join(" ") : String(p.country || p.countryname || p.countryName || "");
+          const active = p.iscurrent === true || String(p.iscurrent).toLowerCase() === "true" || !("iscurrent" in p);
+          return active && countryValue.toLowerCase().includes(country) && ["TC","FL","DR","WF"].includes(eventType);
+        }).slice(0, 5).map((feature) => {
+          const p = feature.properties || {};
+          return { name: p.name || p.eventname || p.eventName || p.eventtype || "Regional hazard", type: p.eventtype || p.eventType || "Hazard", level: p.alertlevel || p.alertLevel || "Information", details: p.url || p.reportUrl || p.detailsUrl || null };
+        });
+      }
+      setTravelResult({ city, data: result, alerts });
     } catch (err) { setTravelError(err.message || "Could not load destination forecast."); }
     finally { setTravelLoading(false); }
   };
 
 
+
+  useEffect(() => {
+    let active = true;
+    if (!place?.name) { setCommunityReports([]); return () => { active = false; }; }
+    const loadCommunityReports = async () => {
+      try {
+        const reportsQuery = query(collection(db, "communityWeatherReports"), where("city", "==", place.name), limit(10));
+        const snapshot = await getDocs(reportsQuery);
+        if (active) setCommunityReports(snapshot.docs.map((item) => ({ id: item.id, ...item.data() })));
+      } catch { if (active) setCommunityReports([]); }
+    };
+    void loadCommunityReports();
+    return () => { active = false; };
+  }, [place?.name]);
+
+  const checkRouteWeather = async () => {
+    const destinationName = routeDestination.trim();
+    if (!destinationName) { setRouteStatus("Enter a destination city."); return; }
+    if (!place) { setRouteStatus("Your starting city is not available."); return; }
+    setRouteStatus("Checking weather at both cities…");
+    setRouteResult(null);
+    try {
+      const destination = await getCity(destinationName);
+      const destinationData = await getWeather(destination);
+      const summarize = (snapshot) => {
+        const c = snapshot?.forecast?.current || {};
+        const d = snapshot?.forecast?.daily || {};
+        return {
+          temperature: c.temperature_2m,
+          code: c.weather_code,
+          rain: d.precipitation_probability_max?.[0],
+          wind: c.wind_speed_10m,
+          visibility: c.visibility
+        };
+      };
+      setRouteResult({
+        origin: { name: place.name, weather: summarize(data) },
+        destination: { name: destination.name, weather: summarize(destinationData) }
+      });
+      setRouteStatus("Weather snapshots loaded for both cities.");
+    } catch (routeError) {
+      setRouteStatus(routeError.message || "Could not compare route weather.");
+    }
+  };
+
+  const reportWeather = async (observation) => {
+    if (!place) return;
+    if (!firebaseUserId) { setCommunityStatus("Community reports require a temporary Firebase connection. Try again when connected."); return; }
+    setCommunityStatus("Submitting observation…");
+    try {
+      await addDoc(collection(db, "communityWeatherReports"), {
+        observation,
+        city: place.name,
+        country: place.country || null,
+        latitudeRounded: Number(Number(place.latitude).toFixed(2)),
+        longitudeRounded: Number(Number(place.longitude).toFixed(2)),
+        source: "SkyCast community report",
+        createdAt: serverTimestamp()
+      });
+      setCommunityStatus("Your observation was submitted. It is not yet independently verified.");
+    } catch (reportError) {
+      setCommunityStatus("Could not submit this report. Firestore permissions or connection may need checking.");
+    }
+  };
 
   const isFavorite = !!place && favorites.some((item) => item.toLowerCase() === place.name.toLowerCase());
   const toggleFavorite = () => {
@@ -295,32 +400,24 @@ export default function App() {
     const alerts = [];
     const rain = daily.precipitation_probability_max?.[0] ?? 0;
     const uv = daily.uv_index_max?.[0] ?? 0;
-    if (rain >= 60) alerts.push({ icon: "☂️", title: "Rain likely", detail: rain + "% chance today. Consider carrying an umbrella." });
-    if (uv >= 8) alerts.push({ icon: "☀️", title: "Very high UV", detail: "Plan shade and sun protection around midday." });
-    if (Number.isFinite(data?.air?.aqi) && data.air.aqi > 100) alerts.push({ icon: "🌫️", title: "Air quality alert", detail: "Air quality may affect sensitive groups. Check local conditions before extended outdoor activity." });
-    if (current.wind_speed_10m >= 40) alerts.push({ icon: "💨", title: "Strong wind", detail: "Wind speeds are elevated. Take care outdoors." });
+    if (rain >= 60) alerts.push({ icon: "RAIN", title: "Rain likely", detail: rain + "% chance today. Consider carrying an umbrella." });
+    if (uv >= 8) alerts.push({ icon: "○", title: "Very high UV", detail: "Plan shade and sun protection around midday." });
+    if (Number.isFinite(data?.air?.aqi) && data.air.aqi > 100) alerts.push({ icon: "≋", title: "Air quality alert", detail: "Air quality may affect sensitive groups. Check local conditions before extended outdoor activity." });
+    if (current.wind_speed_10m >= 40) alerts.push({ icon: "↝", title: "Strong wind", detail: "Wind speeds are elevated. Take care outdoors." });
     return alerts;
   }, [current, daily, data?.air?.aqi]);
 
-  return <View style={styles.screen}>
-    <StatusBar barStyle="light-content" backgroundColor={colors.background}/>
+  return <View style={[styles.screen, weatherMode === "night" ? styles.screenNight : weatherMode === "rain" ? styles.screenRain : styles.screenDay]}>
+    <StatusBar barStyle={weatherMode === "night" ? "light-content" : "dark-content"} backgroundColor={weatherMode === "night" ? "#101827" : colors.background}/>
     <ScrollView contentInsetAdjustmentBehavior="automatic" keyboardShouldPersistTaps="handled" contentContainerStyle={styles.content}>
       <View style={styles.top}>
-        <View><Text style={styles.brand}>CLASSIC CLOUD CO.</Text><Text style={styles.eyebrow}>A LITTLE WEATHER, A LOT OF WONDER</Text></View>
+        <View><Text style={styles.brand}>SKYCAST</Text><Text style={styles.eyebrow}>WEATHER, IN A CLEARER LIGHT</Text></View>
         <Text style={styles.live}>● LIVE DATA</Text>
       </View>
-      <View style={styles.pageNav}>
-        {[
-          ["home","Home"],["story","Weather Story"],["rain","Rain & Air"],["sun","Sun & Sky"],
-          ["travel","Travel"],["forecast","Forecast FM"],["dashboard","Dashboard"],["more","More"]
-        ].map(([key,label]) => <Pressable key={key} accessibilityRole="button" accessibilityState={{selected:page===key}} onPress={() => setPage(key)} style={[styles.pageNavButton,page===key&&styles.pageNavButtonActive]}>
-          <Text style={[styles.pageNavText,page===key&&styles.pageNavTextActive]}>{label}</Text>
-        </Pressable>)}
-      </View>
-      {page !== "home" ? <Text style={styles.pageHeading}>{({story:"Weather Story",rain:"Rain & Air Quality",sun:"Sun & Sky",travel:"Travel Planner",forecast:"Forecast FM",dashboard:"Personal Dashboard",more:"More tools"})[page]}</Text> : null}
+      {page !== "home" ? <Text style={styles.pageHeading}>{({rain:"Rain, Air & Sun",travel:"Travel Planner",forecast:"Your forecast",radio:"Forecast FM",explore:"Explore",intelligence:"Weather Intelligence",dashboard:"Personal Dashboard",more:"More tools"})[page]}</Text> : null}
 {page === "home" ? <>
-      <Text style={styles.heading}>A little note from the sky.</Text>
-      <Text style={styles.subheading}>Your daily forecast, with a touch of nostalgia.</Text>
+      <Text style={styles.heading}>Weather decisions for {place?.name || "your city"}.</Text>
+      <Text style={styles.subheading}>Practical guidance for rain, outdoor plans and changing conditions.</Text>
       <View style={styles.searchRow}>
         <TextInput accessibilityLabel="Search city" value={query} onChangeText={setQuery} onSubmitEditing={() => loadCity(query)} returnKeyType="search" placeholder="Search any city" placeholderTextColor={colors.muted} style={styles.input}/>
         <Pressable accessibilityRole="button" onPress={() => loadCity(query)} style={styles.button}><Text style={styles.buttonText}>Search</Text></Pressable>
@@ -334,10 +431,33 @@ export default function App() {
 
 </> : null}
       {loading ? <View style={styles.state}><ActivityIndicator size="large" color={colors.accent}/><Text style={styles.muted}>Consulting the weather bureau…</Text></View>
-      : error && !current ? <View style={styles.state}><Text style={styles.weatherIcon}>☁️</Text><Text style={styles.cardTitle}>Forecast temporarily unavailable</Text><Text style={styles.muted}>{error}</Text><Pressable onPress={() => loadCity(query)} style={styles.retry}><Text style={styles.buttonText}>Try again</Text></Pressable></View>
+      : error && !current ? <View style={styles.state}><Text style={styles.weatherIcon}>≋</Text><Text style={styles.cardTitle}>Forecast temporarily unavailable</Text><Text style={styles.muted}>{error}</Text><Pressable onPress={() => loadCity(query)} style={styles.retry}><Text style={styles.buttonText}>Try again</Text></Pressable></View>
       : current && daily ? <>
         {error ? <Text style={styles.inlineError}>{error}</Text> : null}
-{page === "forecast" ? <ForecastFM place={place} forecast={data.forecast} unit={unit}/> : null}
+{page === "radio" ? <ForecastFM place={place} forecast={data.forecast} air={data.air} unit={unit}/> : null}
+{page === "intelligence" ? <IntelligencePanel forecast={data.forecast} air={data.air} climate={data.climate} place={place} onAsk={() => setPage("radio")} onReport={reportWeather} reportStatus={communityStatus} reports={communityReports} routeDestination={routeDestination} onRouteDestinationChange={setRouteDestination} onCheckRoute={checkRouteWeather} routeResult={routeResult} routeStatus={routeStatus}/> : null}
+ {page === "forecast" ? <View style={styles.section}>
+  <Text style={styles.sectionTitle}>The week ahead</Text>
+  <Text style={styles.muted}>A seven-day view for {place?.name || "your location"}.</Text>
+  <View style={styles.forecast}>
+    {daily.time.map((date,i) => { const w=describe(daily.weather_code[i]); return <View key={"forecast-tab-"+date} style={styles.forecastRow}>
+      <Text style={styles.day}>{dayLabel(date,i)}</Text><Text style={styles.forecastIcon}>{w[1]}</Text><Text style={styles.forecastCondition}>{w[0]}</Text>
+      <Text style={styles.high}>{temp(daily.temperature_2m_max[i])}</Text><Text style={styles.low}>{temp(daily.temperature_2m_min[i])}</Text>
+      <Text style={styles.rainChance}>{number(daily.precipitation_probability_max[i],"%")}</Text>
+    </View>; })}
+  </View>
+  <Text style={styles.timestamp}>Hourly details and spoken briefings are available in Forecast FM.</Text>
+  <Pressable onPress={()=>setPage("radio")} style={styles.exploreTile}><Text style={styles.exploreTileTitle}>Listen to Forecast FM →</Text><Text style={styles.exploreTileHint}>Choose a presenter and hear today's outlook.</Text></Pressable>
+</View> : null}
+{page === "explore" ? <View style={styles.section}>
+  <Text style={styles.sectionTitle}>Explore your atmosphere</Text>
+  <Text style={styles.muted}>Choose a weather tool for {place?.name || "your city"}.</Text>
+  {[
+    ["rain","Rain, Air & Sun","Rain chances, air quality, UV, sunrise and sunset."],
+    ["travel","Travel Planner","Check weather at another destination."],
+     ["intelligence","Weather Intelligence","Daily decisions, activity scores, community reports and safety guidance."]
+  ].map(([key,title,hint])=><Pressable key={key} onPress={()=>setPage(key)} style={styles.exploreTile}><Text style={styles.exploreTileTitle}>{title}  →</Text><Text style={styles.exploreTileHint}>{hint}</Text></Pressable>)}
+</View> : null}
 {page === "home" ? <>
         <View style={styles.hero}>
           <WeatherModeScene mode={weatherMode} code={current.weather_code} windSpeed={current.wind_speed_10m} temperature={temp(current.temperature_2m)} feelsLike={temp(current.apparent_temperature)} condition={condition[0]} time={current.time} place={place?.name}/>
@@ -360,15 +480,6 @@ export default function App() {
 
 
 
-{page === "story" ? <>
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Your written weather briefing</Text>
-          <View style={styles.briefing}><Text style={styles.briefingKicker}>THE DAILY OUTLOOK</Text><Text style={styles.briefingText}>{briefing}</Text><Text style={styles.briefingFooter}>Updated with the latest available forecast · No audio or speech</Text></View>
-        </View>
-
-</> : null}
-
-
 {page === "rain" ? <>
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Environment snapshot</Text>
@@ -381,7 +492,22 @@ export default function App() {
           <Text style={styles.timestamp}>Air-quality readings are estimates and may be unavailable for some locations.</Text>
         </View>
 
-        {daily.precipitation_probability_max?.[0] >= 60 ? <View style={styles.alert}><Text style={styles.alertTitle}>☂ Rain heads-up</Text><Text style={styles.alertText}>There is a {Math.round(daily.precipitation_probability_max[0])}% chance of precipitation today. Consider carrying an umbrella.</Text></View> : null}
+        {daily.precipitation_probability_max?.[0] >= 60 ? <View style={styles.alert}><Text style={styles.alertTitle}>RAIN Rain heads-up</Text><Text style={styles.alertText}>There is a {Math.round(daily.precipitation_probability_max[0])}% chance of precipitation today. Consider carrying an umbrella.</Text></View> : null}
+
+</> : null}
+
+
+{page === "rain" ? <>
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Sun & sky</Text>
+          <View style={styles.featureCard}>
+            <View style={styles.sunRow}>
+              <View style={styles.sunMetric}><Text style={styles.sunIcon}>SUNRISE</Text><Text style={styles.featureHint}>SUNRISE</Text><Text style={styles.sunValue}>{daily.sunrise?.[0] ? clockLabel(daily.sunrise[0]) : "-"}</Text></View>
+              <View style={styles.sunMetric}><Text style={styles.sunIcon}>SUNSET</Text><Text style={styles.featureHint}>SUNSET</Text><Text style={styles.sunValue}>{daily.sunset?.[0] ? clockLabel(daily.sunset[0]) : "-"}</Text></View>
+            </View>
+            <Text style={styles.featureText}>Daylight duration · {daily.sunrise?.[0] && daily.sunset?.[0] ? (() => { const minutes = Math.max(0,Math.round((new Date(daily.sunset[0])-new Date(daily.sunrise[0]))/60000)); return Math.floor(minutes/60)+"h "+(minutes%60)+"m"; })() : "Unavailable"}</Text>
+          </View>
+        </View>
 
 </> : null}
 
@@ -394,7 +520,7 @@ export default function App() {
               <Text style={styles.hourTime}>{clockLabel(time)}</Text>
               <Text style={styles.hourIcon}>{describe(hourly.weather_code?.[i+hourlyStart] ?? daily.weather_code[0])[1]}</Text>
               <Text style={styles.hourTemp}>{temp(hourly.temperature_2m[i+hourlyStart])}</Text>
-              <Text style={styles.hourRain}>☂ {number(hourly.precipitation_probability[i+hourlyStart],"%")}</Text>
+              <Text style={styles.hourRain}>RAIN {number(hourly.precipitation_probability[i+hourlyStart],"%")}</Text>
             </View>)}
           </ScrollView>
         </View>
@@ -405,10 +531,10 @@ export default function App() {
             {daily.time.map((date,i) => { const w=describe(daily.weather_code[i]); return <View key={date} style={styles.forecastRow}>
               <Text style={styles.day}>{dayLabel(date,i)}</Text><Text style={styles.forecastIcon}>{w[1]}</Text><Text style={styles.forecastCondition}>{w[0]}</Text>
               <Text style={styles.high}>{temp(daily.temperature_2m_max[i])}</Text><Text style={styles.low}>{temp(daily.temperature_2m_min[i])}</Text>
-              <Text style={styles.rainChance}>☂ {number(daily.precipitation_probability_max[i],"%")}</Text>
+              <Text style={styles.rainChance}>RAIN {number(daily.precipitation_probability_max[i],"%")}</Text>
             </View>; })}
           </View>
-          <Text style={styles.timestamp}>Sunrise {daily.sunrise?.[0] ? clockLabel(daily.sunrise[0]) : "—"} · Sunset {daily.sunset?.[0] ? clockLabel(daily.sunset[0]) : "—"}</Text>
+          <Text style={styles.timestamp}>Sunrise {daily.sunrise?.[0] ? clockLabel(daily.sunrise[0]) : "-"} · Sunset {daily.sunset?.[0] ? clockLabel(daily.sunset[0]) : "-"}</Text>
         </View>
       </> : null}
 
@@ -433,42 +559,27 @@ export default function App() {
 </> : null}
 
 
-{page === "sun" ? <>
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Sky & sun tracker</Text>
-          <View style={styles.featureCard}>
-            <View style={styles.sunRow}>
-              <View style={styles.sunMetric}><Text style={styles.sunIcon}>🌅</Text><Text style={styles.featureHint}>SUNRISE</Text><Text style={styles.sunValue}>{daily.sunrise?.[0] ? clockLabel(daily.sunrise[0]) : "—"}</Text></View>
-              <View style={styles.sunMetric}><Text style={styles.sunIcon}>🌇</Text><Text style={styles.featureHint}>SUNSET</Text><Text style={styles.sunValue}>{daily.sunset?.[0] ? clockLabel(daily.sunset[0]) : "—"}</Text></View>
-            </View>
-            <Text style={styles.featureText}>Daylight duration · {daily.sunrise?.[0] && daily.sunset?.[0] ? (() => { const minutes = Math.max(0,Math.round((new Date(daily.sunset[0])-new Date(daily.sunrise[0]))/60000)); return Math.floor(minutes/60)+"h "+(minutes%60)+"m"; })() : "Unavailable"}</Text>
-          </View>
-        </View>
-
-</> : null}
-
-
 {page === "more" ? <>
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>What should I carry?</Text>
           <View style={styles.featureCard}>
-            {(daily.precipitation_probability_max?.[0] >= 40 ? ["☂️ Umbrella or raincoat"] : ["🕶️ Sunglasses if heading into bright sunshine"]).concat(
-              (daily.uv_index_max?.[0] >= 6 ? ["🧴 Sun protection and a cap"] : []),
-              (current?.temperature_2m >= 30 ? ["💧 Water bottle"] : current?.temperature_2m <= 18 ? ["🧥 A light warm layer"] : ["👟 Comfortable shoes"]),
-              (current?.wind_speed_10m >= 25 ? ["💨 Secure loose items outdoors"] : [])
+            {(daily.precipitation_probability_max?.[0] >= 40 ? ["RAIN Umbrella or raincoat"] : ["Sunglasses Sunglasses if heading into bright sunshine"]).concat(
+              (daily.uv_index_max?.[0] >= 6 ? ["Sun protection Sun protection and a cap"] : []),
+              (current?.temperature_2m >= 30 ? ["Water Water bottle"] : current?.temperature_2m <= 18 ? ["Warm layer A light warm layer"] : ["Comfortable shoes Comfortable shoes"]),
+              (current?.wind_speed_10m >= 25 ? ["↝ Secure loose items outdoors"] : [])
             ).map((item) => <Text key={item} style={styles.featureText}>{item}</Text>)}
             <Text style={styles.featureHint}>Suggestions are based on the current forecast, not a safety guarantee.</Text>
           </View>
         </View>
 
         <View style={styles.section}>
-          <View style={styles.sectionTop}><Text style={styles.sectionTitle}>Weather calendar</Text><Text style={styles.eyebrow}>7-DAY VIEW</Text></View>
+          <View style={styles.sectionTop}><Text style={styles.sectionTitle}>Rain, Air & Sun</Text><Text style={styles.eyebrow}>7-DAY VIEW</Text></View>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.calendarRow}>
             {daily.time.map((date,i) => <View key={"calendar-"+date} style={styles.calendarCard}>
               <Text style={styles.featureHint}>{dayLabel(date,i)}</Text>
               <Text style={styles.calendarIcon}>{describe(daily.weather_code[i])[1]}</Text>
               <Text style={styles.featureText}>{temp(daily.temperature_2m_max[i])}</Text>
-              <Text style={styles.featureHint}>☂ {number(daily.precipitation_probability_max?.[i],"%")}</Text>
+              <Text style={styles.featureHint}>RAIN {number(daily.precipitation_probability_max?.[i],"%")}</Text>
             </View>)}
           </ScrollView>
         </View>
@@ -521,6 +632,24 @@ export default function App() {
               <Text style={styles.place}>{travelResult.city.name}, {travelResult.city.country}</Text>
               <Text style={styles.compareTemp}>{temp(travelResult.data.forecast.current.temperature_2m)} · {describe(travelResult.data.forecast.current.weather_code)[0]}</Text>
               <Text style={styles.muted}>Feels like {temp(travelResult.data.forecast.current.apparent_temperature)} · Rain chance today {number(travelResult.data.forecast.daily.precipitation_probability_max?.[0],"%")}</Text>
+              {(() => {
+                const tc=travelResult.data.forecast.current, rain=travelResult.data.forecast.daily.precipitation_probability_max?.[0]??0, code=tc.weather_code;
+                const risks=[(code===95||code===96||code===99)&&"thunderstorms",(code===65||code===82||rain>=70)&&"heavy rain or high rain probability",(code===45||code===48)&&"fog and reduced visibility",tc.wind_speed_10m>=40&&"strong wind"].filter(Boolean);
+                const risk=risks.length?"Caution advised: "+risks.join(", ")+". Allow extra time and check local conditions before departure.":"No major weather-related road risk is indicated by this forecast snapshot. Check live traffic and local road reports before leaving.";
+                const officialUrl=/Bangladesh/i.test(travelResult.city.country||"")?"https://bmd.gov.bd/":"https://worldweather.wmo.int/";
+                return <View style={styles.travelResult}>
+                  <Text style={styles.sectionTitle}>Weather-related road conditions</Text>
+                  <Text style={styles.featureText}>{risk}</Text>
+                  <Text style={styles.timestamp}>Weather-risk estimate only - not a live road-closure, flooding-depth or traffic feed. SkyCast cannot confirm that a road is passable.</Text>
+                  <Text style={styles.sectionTitle}>Regional hazard alerts</Text>
+                  {travelResult.alerts === null ? <Text style={styles.muted}>The GDACS alert feed could not be reached. Check the official local weather service.</Text> : travelResult.alerts.length ? travelResult.alerts.map((alert,i)=><View key={"gdacs-"+i} style={styles.alert}><Text style={styles.alertTitle}>{alert.level} · {alert.name}</Text><Text style={styles.alertText}>{alert.type} alert reported for {travelResult.city.country}. Check the source details and local instructions.</Text>{alert.details ? <Pressable onPress={()=>Linking.openURL(alert.details)} style={styles.mapLink}><Text style={styles.mapLinkText}>Read alert details →</Text></Pressable> : null}</View>) : <Text style={styles.muted}>No matching current GDACS flood, tropical-cyclone, drought or wildfire alert was found for this country in the latest feed. This does not mean there are no local weather warnings.</Text>}
+                  <Text style={styles.timestamp}>Major regional hazard feed: Global Disaster Alert and Coordination System (GDACS). It does not replace local government weather warnings.</Text>
+                  <Text style={styles.sectionTitle}>Official weather alerts</Text>
+                  <Text style={styles.muted}>For local forecasts and warnings, check the destination's official meteorological service.</Text>
+                  <Pressable onPress={()=>Linking.openURL(officialUrl)} style={styles.mapLink}><Text style={styles.mapLinkText}>Open official weather information →</Text></Pressable>
+                  <Pressable onPress={()=>Linking.openURL("https://www.google.com/maps/dir/?api=1&destination="+encodeURIComponent(travelResult.city.name+", "+travelResult.city.country)+"&travelmode=driving")} style={styles.mapLink}><Text style={styles.mapLinkText}>Check driving route and live traffic in Maps →</Text></Pressable>
+                </View>;
+              })()}
               <Pressable onPress={() => loadCity(travelResult.city.name)} style={styles.mapLink}><Text style={styles.mapLinkText}>Open destination forecast on Home →</Text></Pressable>
             </View> : null}
           </View>
@@ -545,8 +674,8 @@ export default function App() {
       {page === "more" ? <View style={styles.section}>
         <Pressable accessibilityRole="button" onPress={() => place && Linking.openURL("https://www.openstreetmap.org/?mlat="+place.latitude+"&mlon="+place.longitude+"#map=10/"+place.latitude+"/"+place.longitude)} style={styles.toolButton}><Text style={styles.toolButtonTitle}>⌖  Open Live Weather Map</Text><Text style={styles.toolButtonHint}>View the selected city on an interactive map</Text></Pressable>
         <Pressable accessibilityRole="button" onPress={() => setPage("dashboard")} style={styles.toolButton}><Text style={styles.toolButtonTitle}>★  Saved cities & settings</Text><Text style={styles.toolButtonHint}>Manage favourite places and temperature units</Text></Pressable>
-        <Pressable accessibilityRole="button" onPress={() => setPage("sun")} style={styles.toolButton}><Text style={styles.toolButtonTitle}>☀  Weather calendar</Text><Text style={styles.toolButtonHint}>See the seven-day outlook and daylight times</Text></Pressable>
-        <Pressable accessibilityRole="button" onPress={() => setPage("rain")} style={styles.toolButton}><Text style={styles.toolButtonTitle}>☂  Rain & air quality</Text><Text style={styles.toolButtonHint}>Check rain chances and air-quality readings</Text></Pressable>
+        <Pressable accessibilityRole="button" onPress={() => setPage("rain")} style={styles.toolButton}><Text style={styles.toolButtonTitle}>○  Weather calendar</Text><Text style={styles.toolButtonHint}>See the seven-day outlook and daylight times</Text></Pressable>
+        <Pressable accessibilityRole="button" onPress={() => setPage("rain")} style={styles.toolButton}><Text style={styles.toolButtonTitle}>RAIN  Rain, Air & Sun</Text><Text style={styles.toolButtonHint}>Rain, air quality, UV and daylight</Text></Pressable>
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Device notifications</Text>
           <View style={styles.featureCard}>
@@ -563,6 +692,17 @@ export default function App() {
       <Pressable onPress={() => loadCity(place?.name || query)} style={styles.refresh}><Text style={styles.refreshText}>↻  Refresh the forecast</Text></Pressable>
       </> : null}
     </ScrollView>
+    <View style={styles.bottomNav}>
+      {[
+        ["home","Home","⌂"],["forecast","Forecast","◷"],["explore","Explore","◇"],["radio","Radio","◉"],["more","More","•••"]
+      ].map(([key,label,symbol]) => {
+        const selected = key === page || (key === "explore" && ["rain","travel","intelligence"].includes(page)) || (key === "more" && page === "dashboard");
+        return <Pressable key={key} accessibilityRole="button" accessibilityState={{selected}} onPress={()=>setPage(key)} style={styles.bottomNavItem}>
+          <Text style={[styles.bottomNavIcon,selected&&styles.bottomNavIconActive]}>{symbol}</Text>
+          <Text style={[styles.bottomNavLabel,selected&&styles.bottomNavLabelActive]}>{label}</Text>
+        </Pressable>;
+      })}
+    </View>
   </View>;
 }
 
@@ -574,23 +714,23 @@ function WeatherModeScene({mode,code,windSpeed=0,temperature,feelsLike,condition
   const night = mode === "night";
   const sunny = mode === "sunny";
   const palette = night
-    ? {sky:"#2B2140",ground:"#51436A",accent:"#E9A25B",text:"#FFFFFF"}
+    ? {sky:"#14263F",ground:"#263D5A",accent:"#E7B96D",text:"#FFFFFF"}
     : rain
       ? {sky:"#2F4B69",ground:"#40607F",accent:"#D6E8FF",text:"#FFFFFF"}
       : sunny
         ? {sky:"#FFE9B8",ground:"#9ADBB0",accent:"#E9A25B",text:"#1D2B3A"}
-        : {sky:"#1B2747",ground:"#31456F",accent:"#FFC46B",text:"#FFFFFF"};
-  const headline = night ? "A quieter kind of night" : rain ? "A little rain in the forecast" : sunny ? "Make room for sunshine" : "Your everyday weather";
-  const subtitle = night ? "The day is winding down." : rain ? "Keep an umbrella close today." : sunny ? "Bright skies are on the way." : "A fresh look at the day ahead.";
+        : {sky:"#203E5B",ground:"#365A78",accent:"#E7B96D",text:"#FFFFFF"};
+  const headline = "Current conditions for " + (place || "your city");
+  const subtitle = "Live conditions and forecast details for your location.";
   useEffect(() => {
     if (reduced) { float.set(0); pulse.set(0); return; }
-    float.set(withRepeat(withTiming(-7,{duration:2300}),-1,true));
-    pulse.set(withRepeat(withTiming(1,{duration:1500}),-1,true));
+    float.set(0);
+    pulse.set(0);
     return () => { cancelAnimation(float); cancelAnimation(pulse); };
   },[reduced,float,pulse,mode]);
   const floatStyle = useAnimatedStyle(() => ({transform:[{translateY:float.get()}]}));
   const glowStyle = useAnimatedStyle(() => ({opacity:0.35+pulse.get()*0.2,transform:[{scale:0.92+pulse.get()*0.12}]}));
-  const symbol = rain ? "🌧️" : night ? "🌙" : sunny ? "☀️" : "⛅";
+  const symbol = rain ? "╱" : night ? "◐" : sunny ? "○" : "◑";
   return <View style={[styles.modeScene,{backgroundColor:palette.sky}]}>
     <View style={[styles.modeGlow,{backgroundColor:palette.accent}]}/>
     <View style={styles.modeTopline}>
@@ -607,13 +747,13 @@ function WeatherModeScene({mode,code,windSpeed=0,temperature,feelsLike,condition
     <View style={[styles.modeHorizon,{backgroundColor:palette.ground}]}/>
     <View style={styles.modeBottom}>
       <View style={{flex:1}}>
-        <Text style={[styles.modeTemperature,{color:palette.text}]}>{temperature || "—"}</Text>
+        <Text style={[styles.modeTemperature,{color:palette.text}]}>{temperature || "-"}</Text>
         <Text style={[styles.modeCondition,{color:palette.text}]}>{condition || "Weather update"}</Text>
         <Text style={[styles.modeSubtitle,{color:palette.text}]}>{subtitle}</Text>
       </View>
       <View style={styles.modeFeels}>
         <Text style={[styles.modeFeelsLabel,{color:palette.accent}]}>FEELS LIKE</Text>
-        <Text style={[styles.modeFeelsValue,{color:palette.text}]}>{feelsLike || "—"}</Text>
+        <Text style={[styles.modeFeelsValue,{color:palette.text}]}>{feelsLike || "-"}</Text>
         <Text style={[styles.modeWind,{color:palette.text}]}>↝ {number(windSpeed," km/h")} wind</Text>
       </View>
     </View>
@@ -638,8 +778,8 @@ function WeatherScene({code,windSpeed=0}) {
   const action = storm ? "Froggy is watching the distant thunder." : snow ? "Froggy bundled up for a snowy day." : rain ? "Froggy is keeping dry under a little umbrella." : windy ? "A breezy day! Froggy is chasing a drifting leaf." : fog ? "Froggy is exploring the misty morning." : sunny ? "Froggy is enjoying a golden sunny day." : partlyCloudy ? "Froggy is playing between sun and clouds." : "Froggy is watching the clouds roll by.";
   useEffect(() => {
     if (reduced) { bob.set(0); drift.set(0); return; }
-    bob.set(withRepeat(withTiming(snow ? -6 : sunny ? -3 : -4,{duration:snow?900:sunny?1450:1100}),-1,true));
-    drift.set(withRepeat(withTiming(windy ? 13 : 6,{duration:windy?1700:2800}),-1,true));
+    bob.set(0);
+    drift.set(0);
     return () => { cancelAnimation(bob); cancelAnimation(drift); };
   },[reduced,bob,drift,snow,sunny,windy]);
   const frogStyle = useAnimatedStyle(() => ({transform:[{translateY:bob.get()}]}));
@@ -655,9 +795,9 @@ function WeatherScene({code,windSpeed=0}) {
     {rain ? <View style={styles.rainDrops}>
       {[0,1,2,3,4,5].map((n)=><View key={n} style={[styles.rainDrop,{left:12+n*27,top:n%2?68:58,backgroundColor:storm?"#D9E3E5":"#6AAFC2"}]}/>)}
     </View> : null}
-    {snow ? <Text style={styles.sceneSnow}>✳   ❄   ✳</Text> : null}
+    {snow ? <Text style={styles.sceneSnow}>✳   *   ✳</Text> : null}
     {storm ? <Text style={styles.sceneLightning}>ϟ</Text> : null}
-    {windy ? <Animated.Text style={[styles.windLeaf,cloudStyle]}>🍃</Animated.Text> : null}
+    {windy ? <Animated.Text style={[styles.windLeaf,cloudStyle]}>↝</Animated.Text> : null}
     {fog ? <View style={styles.fogBand}/> : null}
     <View style={[styles.sceneHillBack,{backgroundColor:hillBack}]}/>
     <View style={[styles.sceneHillFront,{backgroundColor:hillFront}]}/>
@@ -698,8 +838,8 @@ function CatWeatherScene({code,windSpeed=0}) {
   const caption = storm ? "A cozy shelter while the storm passes" : snow ? "A warm little camp on a snowy night" : rain ? "Listening to the rain by the fire" : windy ? "A breezy evening under the stars" : sunny ? "A golden evening at the campsite" : "A quiet night beneath the clouds";
   useEffect(() => {
     if (reduced) { catBob.set(0); firePulse.set(0); return; }
-    catBob.set(withRepeat(withTiming(-3,{duration:2100}),-1,true));
-    firePulse.set(withRepeat(withTiming(1,{duration:850}),-1,true));
+    catBob.set(0);
+    firePulse.set(0);
     return () => { cancelAnimation(catBob); cancelAnimation(firePulse); };
   },[reduced,catBob,firePulse]);
   const catStyle = useAnimatedStyle(() => ({transform:[{translateY:catBob.get()}]}));
@@ -709,7 +849,7 @@ function CatWeatherScene({code,windSpeed=0}) {
     <View style={styles.catStars}><Text style={styles.catStar}>✦</Text><Text style={styles.catStar}>✧</Text><Text style={styles.catStar}>·</Text></View>
     {fog ? <View style={styles.catFog}/>:null}
     {rain ? <View style={styles.catRain}><Text style={styles.catRainMarks}>╱  ╱  ╱  ╱  ╱  ╱</Text></View>:null}
-    {snow ? <Text style={styles.catSnow}>✳     ❄      ✳</Text>:null}
+    {snow ? <Text style={styles.catSnow}>✳     *      ✳</Text>:null}
     {storm ? <Text style={styles.catBolt}>ϟ</Text>:null}
     <View style={styles.catFarHill}/>
     <View style={styles.catPineLeft}><View style={styles.catPineTop}/><View style={styles.catPineMid}/><View style={styles.catPineLow}/><View style={styles.catPineTrunk}/></View>
@@ -749,7 +889,7 @@ function WeatherMotion({children}) {
       drift.set(0);
       return;
     }
-    drift.set(withRepeat(withTiming(-7, { duration: 2400 }), -1, true));
+    drift.set(0);
     return () => cancelAnimation(drift);
   }, [reducedMotion, drift]);
   const animatedStyle = useAnimatedStyle(() => ({
@@ -773,8 +913,8 @@ function SkyBuddy() {
   const sparkle = useSharedValue(0);
   useEffect(() => {
     if (reducedMotion) { bob.set(0); sparkle.set(0); return; }
-    bob.set(withRepeat(withTiming(-6, { duration: 1100 }), -1, true));
-    sparkle.set(withRepeat(withTiming(1, { duration: 900 }), -1, true));
+    bob.set(0);
+    sparkle.set(0);
     return () => { cancelAnimation(bob); cancelAnimation(sparkle); };
   }, [reducedMotion, bob, sparkle]);
   const buddyStyle = useAnimatedStyle(() => ({
@@ -867,14 +1007,23 @@ const styles = StyleSheet.create({
   catCaption:{position:"absolute",bottom:7,left:10,right:10,alignItems:"center",zIndex:6},
   catCaptionText:{color:"#FFF8E9",fontSize:10,fontWeight:"800",backgroundColor:"rgba(40,55,63,0.62)",paddingHorizontal:12,paddingVertical:5,borderRadius:20,overflow:"hidden"},
 
-  screen:{flex:1,backgroundColor:colors.background},content:{padding:spacing.lg,paddingTop:48,paddingBottom:64,gap:spacing.md},
-  pageNav:{flexDirection:"row",flexWrap:"wrap",gap:9,paddingVertical:10},
-  pageNavButton:{paddingHorizontal:15,paddingVertical:10,borderRadius:radius.full,borderWidth:1,borderColor:"#D8C8AE",backgroundColor:"#FFF9EF"},
-  pageNavButtonActive:{backgroundColor:"#B66A45",borderColor:"#B66A45"},
+  screen:{flex:1,backgroundColor:colors.background},screenDay:{backgroundColor:"#F3F8FF"},screenRain:{backgroundColor:"#EAF2FA"},screenNight:{backgroundColor:"#101827"},content:{padding:spacing.lg,paddingTop:48,paddingBottom:112,gap:spacing.md},
+  bottomNav:{position:"absolute",left:12,right:12,bottom:12,minHeight:68,backgroundColor:"#FFFFFF",borderRadius:22,borderWidth:1,borderColor:"#DCE7F3",flexDirection:"row",alignItems:"center",justifyContent:"space-around",paddingHorizontal:5,paddingVertical:7,elevation:10,shadowColor:"#183A5B",shadowOpacity:.12,shadowRadius:16,shadowOffset:{width:0,height:5}},
+  bottomNavItem:{flex:1,minHeight:52,alignItems:"center",justifyContent:"center",gap:3,borderRadius:15},
+  bottomNavIcon:{fontSize:19,color:"#7890A8",fontWeight:"700"},
+  bottomNavIconActive:{color:"#287FC5"},
+  bottomNavLabel:{fontSize:10,color:"#71849A",fontWeight:"600"},
+  bottomNavLabelActive:{color:"#287FC5",fontWeight:"900"},
+  exploreTile:{backgroundColor:"#FFFFFF",borderWidth:1,borderColor:"#DCE7F3",borderRadius:18,padding:16,gap:5,marginTop:8},
+  exploreTileTitle:{color:"#21496E",fontSize:15,fontWeight:"800"},
+  exploreTileHint:{color:"#71849A",fontSize:12,lineHeight:18},
+  pageNav:{flexDirection:"row",flexWrap:"wrap",gap:8,paddingVertical:12,borderTopWidth:1,borderBottomWidth:1,borderColor:colors.border},
+  pageNavButton:{paddingHorizontal:14,paddingVertical:10,borderRadius:radius.sm,borderWidth:1,borderColor:colors.border,backgroundColor:colors.panel},
+  pageNavButtonActive:{backgroundColor:colors.navy,borderColor:colors.navy},
   pageNavText:{color:colors.text,fontSize:12,fontWeight:"800"},
-  pageNavTextActive:{color:colors.background},
-  pageHeading:{color:colors.text,fontSize:26,fontWeight:"900",letterSpacing:-0.7,marginTop:spacing.sm,marginBottom:spacing.xs},
-  welcomeSticker:{flexDirection:"row",alignItems:"center",gap:12,backgroundColor:"#F0E4D1",borderWidth:1,borderColor:"#D8C8AE",borderRadius:22,padding:14,marginTop:spacing.sm},
+  pageNavTextActive:{color:colors.panel},
+  pageHeading:{color:colors.navy,fontSize:26,fontWeight:"700",fontFamily:"serif",letterSpacing:0,marginTop:spacing.sm,marginBottom:spacing.xs},
+  welcomeSticker:{flexDirection:"row",alignItems:"center",gap:12,backgroundColor:colors.panelAlt,borderWidth:1,borderColor:colors.brass,borderRadius:radius.lg,padding:14,marginTop:spacing.sm},
   welcomeEmoji:{fontSize:30},
   buddyWrap:{width:64,height:54,alignItems:"center",justifyContent:"center",marginRight:2},
   buddyCloud:{width:48,height:36,borderRadius:22,backgroundColor:"#E8C98F",alignItems:"center",justifyContent:"center",borderWidth:1.5,borderColor:"#FFF6E8",shadowColor:"#C58A52",shadowOpacity:0.3,shadowRadius:8,shadowOffset:{width:0,height:3},elevation:3},
@@ -887,8 +1036,8 @@ const styles = StyleSheet.create({
   buddySparkle:{position:"absolute",color:"#C58A52",fontSize:16,fontWeight:"900",zIndex:2},
   buddySparkleLeft:{left:2,top:0},
   buddySparkleRight:{right:1,top:8},
-  welcomeTitle:{color:"#293B4A",fontSize:14,fontWeight:"900"},
-  welcomeCopy:{color:"#78858A",fontSize:11,lineHeight:16,marginTop:3},
+  welcomeTitle:{color:colors.navy,fontSize:14,fontWeight:"800",fontFamily:"serif"},
+  welcomeCopy:{color:colors.muted,fontSize:11,lineHeight:16,marginTop:3},
   welcomeStar:{color:"#C58A52",fontSize:23},
   mascotSparkleOne:{position:"absolute",top:7,left:10},
   mascotSparkleTwo:{position:"absolute",right:9,top:17},
@@ -899,16 +1048,16 @@ const styles = StyleSheet.create({
   toolButton:{backgroundColor:colors.panel,borderWidth:1,borderColor:colors.border,borderRadius:radius.lg,padding:spacing.lg,gap:6},
   toolButtonTitle:{color:colors.text,fontSize:15,fontWeight:"800"},
   toolButtonHint:{color:colors.muted,fontSize:11,lineHeight:16},
-  top:{flexDirection:"row",justifyContent:"space-between",alignItems:"center",gap:8},brand:{color:colors.text,fontSize:20,fontWeight:"900",letterSpacing:2.2,fontFamily:"serif"},
+  top:{flexDirection:"row",justifyContent:"space-between",alignItems:"center",gap:8},brand:{color:"#244B70",fontSize:25,fontWeight:"900",letterSpacing:1.1},
   eyebrow:{color:colors.muted,fontSize:9,letterSpacing:1.2,marginTop:4},live:{color:colors.accent,fontSize:9,fontWeight:"800",letterSpacing:1},
-  heading:{color:colors.text,fontSize:27,fontWeight:"900",letterSpacing:-0.6,marginTop:spacing.sm},subheading:{color:colors.muted,fontSize:14,marginTop:-5,lineHeight:21},
+  heading:{color:"#244B70",fontSize:30,fontWeight:"800",letterSpacing:-.7,marginTop:spacing.sm},subheading:{color:colors.muted,fontSize:14,marginTop:-5,lineHeight:21},
   searchRow:{flexDirection:"row",gap:spacing.sm,marginTop:spacing.sm},input:{flex:1,minHeight:48,borderRadius:radius.md,paddingHorizontal:spacing.md,color:colors.text,backgroundColor:colors.panel,borderWidth:1,borderColor:colors.border,fontSize:15},
-  button:{backgroundColor:colors.accent,borderRadius:radius.md,justifyContent:"center",paddingHorizontal:spacing.lg},buttonText:{color:colors.background,fontWeight:"800"},
+  button:{backgroundColor:colors.accent,borderRadius:radius.sm,justifyContent:"center",paddingHorizontal:spacing.lg,borderWidth:1,borderColor:colors.accentDark},buttonText:{color:colors.background,fontWeight:"800"},
   state:{minHeight:180,backgroundColor:colors.panel,borderRadius:radius.lg,justifyContent:"center",alignItems:"center",padding:spacing.lg,gap:spacing.sm},
   muted:{color:colors.muted,fontSize:12,lineHeight:19},weatherIcon:{fontSize:38},cardTitle:{color:colors.text,fontSize:18,fontWeight:"800"},
   retry:{backgroundColor:colors.accent,borderRadius:radius.md,paddingHorizontal:spacing.lg,paddingVertical:spacing.sm,marginTop:spacing.sm},
-  weatherScene:{height:178,borderRadius:18,overflow:"hidden",backgroundColor:"#D8E5E2",marginBottom:16,position:"relative",borderWidth:1,borderColor:"#D8C8AE"},
-  sceneSky:{...StyleSheet.absoluteFillObject,backgroundColor:"#DCE9E5"},
+  weatherScene:{height:178,borderRadius:radius.md,overflow:"hidden",backgroundColor:colors.sky,marginBottom:16,position:"relative",borderWidth:2,borderColor:colors.brass},
+  sceneSky:{...StyleSheet.absoluteFillObject,backgroundColor:"#C6D8D1"},
   sceneSunDisc:{position:"absolute",top:19,right:30,width:36,height:36,borderRadius:18,backgroundColor:"#FFD36E",opacity:.95},
   vectorCloud:{position:"absolute",top:20,left:30,width:92,height:48,zIndex:2},
   cloudPuffLarge:{position:"absolute",left:23,top:0,width:43,height:38,borderRadius:24,backgroundColor:"#F8FCFF"},
@@ -920,8 +1069,8 @@ const styles = StyleSheet.create({
   sceneLightning:{position:"absolute",top:65,right:53,color:"#F6D37B",fontSize:34,fontWeight:"900"},
   windLeaf:{position:"absolute",top:89,left:155,fontSize:24,zIndex:3},
   fogBand:{position:"absolute",top:88,left:-12,right:-12,height:18,backgroundColor:"rgba(255,255,255,0.42)",borderRadius:20,zIndex:2},
-  sceneHillBack:{position:"absolute",bottom:25,left:-18,right:-18,height:76,backgroundColor:"#8CC69A",borderTopLeftRadius:100,borderTopRightRadius:100},
-  sceneHillFront:{position:"absolute",bottom:0,left:-18,right:-18,height:48,backgroundColor:"#6EAD83",borderTopLeftRadius:100,borderTopRightRadius:100},
+  sceneHillBack:{position:"absolute",bottom:25,left:-18,right:-18,height:76,backgroundColor:"#829B82",borderTopLeftRadius:100,borderTopRightRadius:100},
+  sceneHillFront:{position:"absolute",bottom:0,left:-18,right:-18,height:48,backgroundColor:"#55796D",borderTopLeftRadius:100,borderTopRightRadius:100},
   laundry:{position:"absolute",right:18,top:23,width:190,height:85,zIndex:3},
   laundryLine:{position:"absolute",top:23,left:10,right:0,height:2,backgroundColor:"#617F8C",transform:[{rotate:"-8deg"}]},
   laundryPeg:{position:"absolute",top:17,width:3,height:11,backgroundColor:"#D9B978",borderRadius:2},
@@ -942,37 +1091,37 @@ const styles = StyleSheet.create({
   umbrellaHandle:{width:2,height:22,backgroundColor:"#826A57"},
   frogSunglasses:{position:"absolute",top:7,left:15,right:15,flexDirection:"row",justifyContent:"space-between",gap:3},
   frogScarf:{position:"absolute",top:58,left:12,width:55,height:9,borderRadius:6,backgroundColor:"#C98565",borderWidth:1,borderColor:"#F4D7B8",transform:[{rotate:"-5deg"}]},
-  sceneGround:{position:"absolute",bottom:0,left:0,right:0,height:23,backgroundColor:"#5B9975",opacity:0.9},
+  sceneGround:{position:"absolute",bottom:0,left:0,right:0,height:23,backgroundColor:colors.tealDark,opacity:0.9},
   sceneCaption:{position:"absolute",bottom:7,left:10,right:10,alignItems:"center",zIndex:5},
   sceneCaptionText:{color:"#244B4A",fontSize:10,fontWeight:"800",backgroundColor:"rgba(255,255,255,0.88)",paddingHorizontal:12,paddingVertical:5,borderRadius:20,overflow:"hidden"},
-  hero:{backgroundColor:"#FFF9EF",borderRadius:24,borderWidth:1,borderColor:"#D8C8AE",padding:spacing.md,shadowColor:"#7D6B57",shadowOpacity:0.16,shadowRadius:12,shadowOffset:{width:0,height:5},elevation:3},
-  place:{color:colors.text,fontSize:16,fontWeight:"800"},favorite:{borderWidth:1,borderColor:colors.border,borderRadius:radius.full,paddingHorizontal:10,paddingVertical:7},favoriteText:{color:colors.accent,fontSize:11,fontWeight:"800"},
-  heroIcon:{fontSize:48},heroIconMotion:{width:94,height:94,alignItems:"center",justifyContent:"center",borderRadius:30,backgroundColor:"#E6D8C3",borderWidth:1,borderColor:"#C7B394",shadowColor:"#B66A45",shadowOpacity:0.16,shadowRadius:14,shadowOffset:{width:0,height:5},elevation:4},temperature:{color:colors.accent,fontSize:76,fontWeight:"200",letterSpacing:-4,marginTop:12},
+  hero:{backgroundColor:"#FFFFFF",borderRadius:24,borderWidth:1,borderColor:"#D8E7F5",padding:spacing.md,shadowColor:"#2A6CA4",shadowOpacity:0.10,shadowRadius:16,shadowOffset:{width:0,height:5},elevation:3},
+  place:{color:colors.text,fontSize:16,fontWeight:"800"},favorite:{borderWidth:1,borderColor:colors.border,borderRadius:radius.md,paddingHorizontal:10,paddingVertical:7},favoriteText:{color:colors.accent,fontSize:11,fontWeight:"800"},
+  heroIcon:{fontSize:48},heroIconMotion:{width:94,height:94,alignItems:"center",justifyContent:"center",borderRadius:30,backgroundColor:"#E6D8C3",borderWidth:1,borderColor:"#C7B394",shadowColor:"#B66A45",shadowOpacity:0.16,shadowRadius:14,shadowOffset:{width:0,height:5},elevation:4},temperature:{color:"#287FC5",fontSize:76,fontWeight:"300",letterSpacing:-3,marginTop:12},
   condition:{color:colors.text,fontSize:17,fontWeight:"700",marginTop:-4},metrics:{flexDirection:"row",borderTopWidth:1,borderTopColor:colors.border,marginTop:spacing.lg,paddingTop:spacing.md,justifyContent:"space-between",gap:8},
   metric:{gap:5,flex:1},metricLabel:{color:colors.muted,fontSize:9,letterSpacing:1,fontWeight:"800"},metricValue:{color:colors.text,fontSize:13,fontWeight:"700"},
   timestamp:{color:colors.muted,fontSize:10,marginTop:spacing.md,lineHeight:15},mapLink:{marginTop:spacing.md,alignSelf:"flex-start"},mapLinkText:{color:colors.accent,fontWeight:"800",fontSize:12},
-  section:{gap:spacing.sm,marginTop:spacing.sm},sectionTop:{flexDirection:"row",justifyContent:"space-between",alignItems:"center"},sectionTitle:{color:colors.text,fontSize:18,fontWeight:"900",letterSpacing:-0.25},
-  briefing:{backgroundColor:"#FFF9EF",borderWidth:1,borderColor:"#D8C8AE",borderRadius:26,padding:spacing.lg,gap:spacing.sm},
-  briefingKicker:{color:colors.accent,fontSize:9,fontWeight:"900",letterSpacing:2},briefingText:{color:colors.text,fontSize:14,lineHeight:23},briefingFooter:{color:colors.muted,fontSize:10,lineHeight:15},
+  section:{gap:spacing.sm,marginTop:spacing.sm},sectionTop:{flexDirection:"row",justifyContent:"space-between",alignItems:"center"},sectionTitle:{color:"#244B70",fontSize:19,fontWeight:"800",letterSpacing:-.2},
+  briefing:{backgroundColor:colors.panel,borderWidth:1,borderColor:colors.brass,borderRadius:radius.lg,padding:spacing.lg,gap:spacing.sm},
+  briefingKicker:{color:colors.accent,fontSize:9,fontWeight:"800",letterSpacing:2},briefingText:{color:colors.text,fontSize:14,lineHeight:23},briefingFooter:{color:colors.muted,fontSize:10,lineHeight:15},
   environment:{backgroundColor:colors.panel,borderWidth:1,borderColor:colors.border,borderRadius:radius.lg,padding:spacing.md,flexDirection:"row",gap:spacing.sm},
-  alert:{backgroundColor:"#F6E5D2",borderColor:"#D4A66B",borderWidth:1,borderRadius:radius.md,padding:spacing.md,gap:5},alertTitle:{color:"#9A5A38",fontWeight:"900",fontSize:13},alertText:{color:"#5B4A3B",fontSize:12,lineHeight:18},
+  alert:{backgroundColor:"#F0E5D1",borderColor:colors.brass,borderWidth:1,borderRadius:radius.md,padding:spacing.md,gap:5},alertTitle:{color:colors.accentDark,fontWeight:"800",fontSize:13},alertText:{color:colors.text,fontSize:12,lineHeight:18},
   hourly:{gap:spacing.sm,paddingVertical:4},hourCard:{minWidth:76,backgroundColor:colors.panel,borderWidth:1,borderColor:colors.border,borderRadius:radius.md,padding:spacing.sm,alignItems:"center",gap:8},
   hourTime:{color:colors.muted,fontSize:10},hourIcon:{fontSize:20},hourTemp:{color:colors.text,fontSize:17,fontWeight:"800"},hourRain:{color:colors.accent,fontSize:10},
   forecast:{backgroundColor:colors.panel,borderRadius:radius.lg,borderWidth:1,borderColor:colors.border,paddingHorizontal:spacing.md},
   forecastRow:{minHeight:56,flexDirection:"row",alignItems:"center",gap:6,borderBottomWidth:1,borderBottomColor:colors.border},
   day:{width:40,color:colors.text,fontSize:12,fontWeight:"700"},forecastIcon:{width:23,fontSize:17,textAlign:"center"},forecastCondition:{flex:1,color:colors.muted,fontSize:10},
   high:{color:colors.text,fontSize:12,fontWeight:"700",width:26,textAlign:"right"},low:{color:colors.muted,fontSize:12,width:26,textAlign:"right"},rainChance:{color:colors.accent,fontSize:9,width:42,textAlign:"right"},
-  chips:{gap:8},chip:{backgroundColor:colors.panel,borderWidth:1,borderColor:colors.border,borderRadius:radius.full,paddingHorizontal:14,paddingVertical:9},chipText:{color:colors.text,fontSize:12,fontWeight:"700"},
-  compareButton:{backgroundColor:colors.accent,borderRadius:radius.md,minHeight:46,alignItems:"center",justifyContent:"center",padding:spacing.md},disabled:{opacity:.5},
+  chips:{gap:8},chip:{backgroundColor:colors.panel,borderWidth:1,borderColor:colors.border,borderRadius:radius.md,paddingHorizontal:14,paddingVertical:9},chipText:{color:colors.text,fontSize:12,fontWeight:"700"},
+  compareButton:{backgroundColor:colors.navy,borderRadius:radius.sm,minHeight:46,alignItems:"center",justifyContent:"center",padding:spacing.md,borderWidth:1,borderColor:colors.brass},disabled:{opacity:.5},
   compareRow:{flexDirection:"row",alignItems:"center",justifyContent:"space-between",backgroundColor:colors.panel,borderRadius:radius.md,padding:spacing.md,gap:8},
   compareCondition:{color:colors.muted,fontSize:10,flex:1},compareTemp:{color:colors.text,fontSize:16,fontWeight:"800"},
   inlineError:{color:"#A34F42",fontSize:12},
-  featureCard:{backgroundColor:"#FFF9EF",borderWidth:1,borderColor:"#D8C8AE",borderRadius:26,padding:spacing.md,gap:spacing.sm},
+  featureCard:{backgroundColor:colors.panel,borderWidth:1,borderColor:colors.border,borderRadius:radius.lg,padding:spacing.md,gap:spacing.sm},
   featureHint:{color:colors.muted,fontSize:9,letterSpacing:1,fontWeight:"800"},featureText:{color:colors.text,fontSize:13,fontWeight:"600"},
   rainRow:{flexDirection:"row",alignItems:"center",gap:10},rainTrack:{flex:1,height:7,backgroundColor:colors.border,borderRadius:9,overflow:"hidden"},rainFill:{height:7,backgroundColor:colors.accent,borderRadius:9},rainValue:{color:colors.accent,fontSize:11,fontWeight:"800",width:36,textAlign:"right"},
   sunRow:{flexDirection:"row",justifyContent:"space-around"},sunMetric:{alignItems:"center",gap:5},sunIcon:{fontSize:28},sunValue:{color:colors.text,fontSize:20,fontWeight:"800"},
   calendarRow:{gap:8},calendarCard:{width:88,backgroundColor:colors.panel,borderWidth:1,borderColor:colors.border,borderRadius:radius.md,padding:spacing.sm,alignItems:"center",gap:8},calendarIcon:{fontSize:24},
   settingRow:{flexDirection:"row",justifyContent:"space-between",alignItems:"center"},settingValue:{color:colors.accent,fontWeight:"900",fontSize:12},alertLine:{borderTopWidth:1,borderTopColor:colors.border,paddingTop:spacing.sm,gap:4},
-  unitRow:{flexDirection:"row",gap:8},unitButton:{flex:1,borderWidth:1,borderColor:colors.border,borderRadius:radius.md,padding:spacing.sm,alignItems:"center"},unitActive:{backgroundColor:colors.accent,borderColor:colors.accent},unitText:{color:colors.text,fontSize:12,fontWeight:"700"},unitTextActive:{color:colors.background},travelResult:{borderTopWidth:1,borderTopColor:colors.border,paddingTop:spacing.md,gap:6},
-  footer:{color:colors.muted,fontSize:10,lineHeight:16,marginTop:spacing.lg},refresh:{alignSelf:"center",padding:spacing.sm},refreshText:{color:colors.accent,fontWeight:"700"}
+  unitRow:{flexDirection:"row",gap:8},unitButton:{flex:1,borderWidth:1,borderColor:colors.border,borderRadius:radius.md,padding:spacing.sm,alignItems:"center"},unitActive:{backgroundColor:colors.navy,borderColor:colors.navy},unitText:{color:colors.text,fontSize:12,fontWeight:"700"},unitTextActive:{color:colors.background},travelResult:{borderTopWidth:1,borderTopColor:colors.border,paddingTop:spacing.md,gap:6},
+  footer:{color:colors.muted,fontSize:10,lineHeight:16,marginTop:spacing.lg},refresh:{alignSelf:"center",padding:spacing.sm},refreshText:{color:colors.teal,fontWeight:"800"}
 });
