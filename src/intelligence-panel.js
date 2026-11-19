@@ -1,0 +1,80 @@
+import React from "react";
+import { Pressable, Text, View } from "react-native";
+import { getActivityScores, getSafetyGuidance, getWeatherDecisions } from "./weather-intelligence";
+import { colors, spacing } from "./theme";
+
+const styles = {
+  wrap: { gap: spacing.md },
+  section: { backgroundColor: colors.panel, borderWidth: 1, borderColor: colors.border, borderRadius: 16, padding: spacing.md, gap: 10 },
+  title: { color: colors.navy, fontSize: 18, fontWeight: "800" },
+  label: { color: colors.muted, fontSize: 10, fontWeight: "800", letterSpacing: 1 },
+  answer: { color: colors.text, fontSize: 19, fontWeight: "800" },
+  body: { color: colors.muted, fontSize: 12, lineHeight: 18 },
+  row: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 },
+  score: { color: colors.accentDark, fontSize: 17, fontWeight: "800", width: 42, textAlign: "right" },
+  track: { height: 7, flex: 1, backgroundColor: colors.panelAlt, overflow: "hidden", borderRadius: 4 },
+  fill: { height: 7, backgroundColor: colors.accent, borderRadius: 4 },
+  buttonRow: { flexDirection: "row", gap: 8 },
+  button: { borderWidth: 1, borderColor: colors.border, paddingVertical: 10, paddingHorizontal: 12, borderRadius: 8, flex: 1, alignItems: "center" },
+  buttonText: { color: colors.accentDark, fontSize: 12, fontWeight: "800" },
+  warning: { color: colors.warning, fontSize: 12, fontWeight: "700" }
+};
+
+export default function IntelligencePanel({ forecast, place, onAsk, onReport, reportStatus }) {
+  const decisions = getWeatherDecisions(forecast);
+  const scores = getActivityScores(forecast);
+  const safety = getSafetyGuidance(forecast?.current?.weather_code ?? -1);
+  return <View style={styles.wrap}>
+    <View style={styles.section}>
+      <Text style={styles.label}>WEATHER DECISIONS · {place?.name || "YOUR LOCATION"}</Text>
+      <Text style={styles.title}>What should I do today?</Text>
+      <Text style={styles.body}>Recommendations are calculated from the available forecast, not guarantees.</Text>
+      <View style={{gap:4}}>
+        <Text style={styles.answer}>{decisions.umbrella.answer}</Text>
+        <Text style={styles.body}>{decisions.umbrella.detail}</Text>
+      </View>
+      <View style={{height:1,backgroundColor:colors.border}}/>
+      <View style={{gap:4}}>
+        <Text style={styles.answer}>{decisions.laundry.answer}</Text>
+        <Text style={styles.body}>{decisions.laundry.detail}</Text>
+      </View>
+      <View style={{height:1,backgroundColor:colors.border}}/>
+      <Text style={styles.label}>RAIN TIMING</Text>
+      <Text style={styles.body}>{decisions.rainTiming.detail}</Text>
+      {!decisions.rainTiming.hasMinuteData ? <Text style={styles.warning}>No minute-level claim is made when this provider does not return 15-minute data.</Text> : null}
+    </View>
+    <View style={styles.section}>
+      <Text style={styles.label}>OUTDOOR ACTIVITY PLANNER</Text>
+      <Text style={styles.title}>Activity conditions</Text>
+      {scores.map((item) => <View key={item.id} style={{gap:4}}>
+        <View style={styles.row}><Text style={{color:colors.text,fontWeight:"700",fontSize:13}}>{item.label}</Text><Text style={styles.score}>{item.score}/100</Text></View>
+        <View style={styles.track}><View style={[styles.fill,{width:item.score+"%"}]}/></View>
+        <Text style={styles.body}>{item.reason}</Text>
+      </View>)}
+      <Text style={styles.body}>These are transparent planning estimates, not safety guarantees. Check local conditions before activities.</Text>
+    </View>
+    <View style={styles.section}>
+      <Text style={styles.label}>COMMUNITY WEATHER REPORTS</Text>
+      <Text style={styles.title}>What is happening near you?</Text>
+      <Text style={styles.body}>Share a local observation for {place?.name || "this location"}. Reports are observations, not verified official measurements.</Text>
+      <View style={styles.buttonRow}>
+        <Pressable accessibilityRole="button" onPress={() => onReport?.("raining")} style={styles.button}><Text style={styles.buttonText}>It's raining</Text></Pressable>
+        <Pressable accessibilityRole="button" onPress={() => onReport?.("not_raining")} style={styles.button}><Text style={styles.buttonText}>Not raining</Text></Pressable>
+      </View>
+      {reportStatus ? <Text style={styles.body}>{reportStatus}</Text> : null}
+    </View>
+    <View style={styles.section}>
+      <Text style={styles.label}>SEVERE WEATHER SAFETY</Text>
+      <Text style={styles.title}>Simple steps to stay safer</Text>
+      {safety.map((line, index) => <Text key={index} style={styles.body}>{index + 1}. {line}</Text>)}
+      <Text style={styles.warning}>This guidance is available in-app. Always follow official alerts and emergency services for your area.</Text>
+    </View>
+    <View style={styles.section}>
+      <Text style={styles.label}>MORE WEATHER INTELLIGENCE</Text>
+      <Text style={styles.title}>Ask a weather question</Text>
+      <Text style={styles.body}>Ask the Forecast already supports weather questions and uses the latest loaded forecast snapshot.</Text>
+      <Pressable accessibilityRole="button" onPress={onAsk} style={[styles.button,{flex:0}]}><Text style={styles.buttonText}>Open Ask the Forecast</Text></Pressable>
+      <Text style={styles.body}>Calendar-aware event alerts, live route-risk feeds, pollen-specific forecasts, long-term climate comparisons and camera-based AR are next integrations. They will only be shown as active when their data providers, permissions and device capabilities are connected.</Text>
+    </View>
+  </View>;
+}
