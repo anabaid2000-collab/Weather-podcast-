@@ -20,7 +20,7 @@ const styles = {
   warning: { color: colors.warning, fontSize: 12, fontWeight: "700" }
 };
 
-export default function IntelligencePanel({ forecast, air, climate, place, onAsk, onReport, reportStatus, reports = [] }) {
+export default function IntelligencePanel({ forecast, air, climate, place, onAsk, onReport, reportStatus, reports = [], routeDestination, onRouteDestinationChange, onCheckRoute, routeResult, routeStatus }) {
   const decisions = getWeatherDecisions(forecast);
   const scores = getActivityScores(forecast);
   const safety = getSafetyGuidance(forecast?.current?.weather_code ?? -1);
@@ -79,6 +79,20 @@ export default function IntelligencePanel({ forecast, air, climate, place, onAsk
       <Text style={styles.answer}>{eventRisk}</Text>
       <Text style={styles.body}>{eventName.trim() ? eventName.trim()+" · " : ""}{eventDate || "No date selected"} · {eventDetails}</Text>
       <Text style={styles.warning}>This checks the selected day's forecast only. It does not read or modify your phone calendar, send event notifications, or assess route conditions.</Text>
+    </View>
+    <View style={styles.section}>
+    <View style={styles.section}>
+      <Text style={styles.label}>ROUTE WEATHER CHECK</Text>
+      <Text style={styles.title}>Compare weather along your trip</Text>
+      <Text style={styles.body}>Starting city: {place?.name || "Unavailable"}</Text>
+      <TextInput accessibilityLabel="Route destination city" value={routeDestination || ""} onChangeText={onRouteDestinationChange} placeholder="Destination city" placeholderTextColor={colors.muted} style={{borderWidth:1,borderColor:colors.border,borderRadius:8,padding:10,color:colors.text}}/>
+      <Pressable accessibilityRole="button" onPress={onCheckRoute} style={[styles.button,{flex:0}]}><Text style={styles.buttonText}>Compare route weather</Text></Pressable>
+      {routeStatus ? <Text style={styles.body}>{routeStatus}</Text> : null}
+      {routeResult ? [routeResult.origin,routeResult.destination].map((point) => <View key={point.name} style={{gap:3}}>
+        <Text style={{color:colors.text,fontWeight:"800",fontSize:14}}>{point.name}</Text>
+        <Text style={styles.body}>{Number.isFinite(point.weather.temperature) ? Math.round(point.weather.temperature)+"°C" : "Temperature unavailable"} · Weather code {Number.isFinite(point.weather.code) ? point.weather.code : "unavailable"} · Rain probability {Number.isFinite(point.weather.rain) ? Math.round(point.weather.rain)+"%" : "unavailable"} · Wind {Number.isFinite(point.weather.wind) ? Math.round(point.weather.wind)+" km/h" : "unavailable"}</Text>
+      </View>) : null}
+      <Text style={styles.warning}>This compares current city forecasts only. It does not calculate the road or rail path, departure-time weather, live traffic, closures or route safety.</Text>
     </View>
     <View style={styles.section}>
       <Text style={styles.label}>HEALTH AND ENVIRONMENT</Text>
