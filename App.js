@@ -4,11 +4,12 @@ import { ActivityIndicator, AppState, Linking, Pressable, ScrollView, StatusBar,
 import Animated, { cancelAnimation, useAnimatedStyle, useReducedMotion, useSharedValue, withRepeat, withTiming } from "react-native-reanimated";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { auth, db } from "./src/firebase";
-import { doc, getDoc, serverTimestamp, setDoc } from "firebase/firestore";
+import { addDoc, collection, doc, getDoc, serverTimestamp, setDoc } from "firebase/firestore";
 import { signInAnonymously } from "firebase/auth";
 import { registerForPushNotificationsAsync } from "./src/notifications";
 import { colors, spacing, radius } from "./src/theme";
 import ForecastFM from "./src/forecast-fm"; // native Forecast FM integration
+import IntelligencePanel from "./src/intelligence-panel";
 
 const FAVORITES_KEY = "skycast.favoriteCities.v1";
 const weatherCodes = {
@@ -33,10 +34,10 @@ async function getCity(name) {
 }
 async function getWeather(city) {
   const base = "https://api.open-meteo.com/v1/forecast?latitude=" + city.latitude + "&longitude=" + city.longitude;
-  const forecastUrl = base + "&current=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,weather_code,wind_speed_10m,wind_direction_10m,pressure_msl,cloud_cover,visibility&hourly=temperature_2m,precipitation_probability,uv_index,weather_code,relative_humidity_2m,wind_speed_10m,visibility,cloud_cover&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,uv_index_max,sunrise,sunset&timezone=auto&forecast_days=7";
+  const forecastUrl = base + "&current=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,weather_code,wind_speed_10m,wind_direction_10m,pressure_msl,cloud_cover,visibility&hourly=temperature_2m,precipitation_probability,uv_index,weather_code,relative_humidity_2m,wind_speed_10m,visibility,cloud_cover&minutely_15=precipitation,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,uv_index_max,sunrise,sunset&timezone=auto&forecast_days=7";
   const [forecastResponse, airResponse] = await Promise.all([
     fetch(forecastUrl),
-    fetch("https://air-quality-api.open-meteo.com/v1/air-quality?latitude=" + city.latitude + "&longitude=" + city.longitude + "&hourly=us_aqi,pm2_5,pm10&timezone=auto&forecast_days=1").catch(() => null)
+    fetch("https://air-quality-api.open-meteo.com/v1/air-quality?latitude=" + city.latitude + "&longitude=" + city.longitude + "&hourly=us_aqi,pm2_5,pm10,alder_pollen,birch_pollen,grass_pollen,mugwort_pollen,olive_pollen,ragweed_pollen&timezone=auto&forecast_days=1").catch(() => null)
   ]);
   if (!forecastResponse.ok) throw new Error("Weather service is temporarily unavailable.");
   const forecast = await forecastResponse.json();
@@ -46,7 +47,7 @@ async function getWeather(city) {
     const times = result.hourly?.time || [];
     const matchingIndex = times.findIndex((time) => time >= forecast.current.time);
     const index = matchingIndex < 0 ? Math.max(0, times.length - 1) : matchingIndex;
-    air = { aqi: result.hourly?.us_aqi?.[index], pm25: result.hourly?.pm2_5?.[index], pm10: result.hourly?.pm10?.[index] };
+    air = { aqi: result.hourly?.us_aqi?.[index], pm25: result.hourly?.pm2_5?.[index], pm10: result.hourly?.pm10?.[index], pollen: { alder: result.hourly?.alder_pollen?.[index], birch: result.hourly?.birch_pollen?.[index], grass: result.hourly?.grass_pollen?.[index], mugwort: result.hourly?.mugwort_pollen?.[index], olive: result.hourly?.olive_pollen?.[index], ragweed: result.hourly?.ragweed_pollen?.[index] } };
   }
   return { forecast, air };
 }
@@ -71,6 +72,7 @@ export default function App() {
   const [travelLoading, setTravelLoading] = useState(false);
   const [travelError, setTravelError] = useState("");
   const [offlineCopy, setOfflineCopy] = useState(false);
+  const [communityStatus, setCommunityStatus] = useState("");
   const [page, setPage] = useState("home");
   const temp = (value) => number(unit === "F" && Number.isFinite(value) ? value * 9 / 5 + 32 : value, "°" + unit);
 
@@ -260,6 +262,27 @@ export default function App() {
 
 
 
+  const reportWeather = async (observation) => {
+    if (!place) return;
+    if (!firebaseUserId) { setCommunityStatus("Community reports require a temporary Firebase connection. Try again when connected."); return; }
+    setCommunityStatus("Submitting observation…");
+    try {
+      await addDoc(collection(db, "communityWeatherReports"), {
+        observation,
+        city: place.name,
+        country: place.country || null,
+        latitudeRounded: Number(Number(place.latitude).toFixed(2)),
+        longitudeRounded: Number(Number(place.longitude).toFixed(2)),
+        userId: firebaseUserId,
+        source: "SkyCast community report",
+        createdAt: serverTimestamp()
+      });
+      setCommunityStatus("Your observation was submitted. It is not yet independently verified.");
+    } catch (reportError) {
+      setCommunityStatus("Could not submit this report. Firestore permissions or connection may need checking.");
+    }
+  };
+
   const isFavorite = !!place && favorites.some((item) => item.toLowerCase() === place.name.toLowerCase());
   const toggleFavorite = () => {
     if (!place) return;
@@ -328,7 +351,7 @@ export default function App() {
         <View><Text style={styles.brand}>SKYCAST</Text><Text style={styles.eyebrow}>WEATHER, IN A CLEARER LIGHT</Text></View>
         <Text style={styles.live}>● LIVE DATA</Text>
       </View>
-      {page !== "home" ? <Text style={styles.pageHeading}>{({rain:"Rain, Air & Sun",travel:"Travel Planner",forecast:"Your forecast",radio:"Forecast FM",explore:"Explore",dashboard:"Personal Dashboard",more:"More tools"})[page]}</Text> : null}
+      {page !== "home" ? <Text style={styles.pageHeading}>{({rain:"Rain, Air & Sun",travel:"Travel Planner",forecast:"Your forecast",radio:"Forecast FM",explore:"Explore",intelligence:"Weather Intelligence",dashboard:"Personal Dashboard",more:"More tools"})[page]}</Text> : null}
 {page === "home" ? <>
       <Text style={styles.heading}>Weather, in a clearer light.</Text>
       <Text style={styles.subheading}>A fresh, thoughtful look at the sky around you.</Text>
@@ -349,7 +372,8 @@ export default function App() {
       : current && daily ? <>
         {error ? <Text style={styles.inlineError}>{error}</Text> : null}
 {page === "radio" ? <ForecastFM place={place} forecast={data.forecast} air={data.air} unit={unit}/> : null}
-{page === "forecast" ? <View style={styles.section}>
+{page === "intelligence" ? <IntelligencePanel forecast={data.forecast} place={place} onAsk={() => setPage("radio")} onReport={reportWeather} reportStatus={communityStatus}/> : null}
+ {page === "forecast" ? <View style={styles.section}>
   <Text style={styles.sectionTitle}>The week ahead</Text>
   <Text style={styles.muted}>A seven-day view for {place?.name || "your location"}.</Text>
   <View style={styles.forecast}>
@@ -367,7 +391,8 @@ export default function App() {
   <Text style={styles.muted}>Choose a weather tool for {place?.name || "your city"}.</Text>
   {[
     ["rain","Rain, Air & Sun","Rain chances, air quality, UV, sunrise and sunset."],
-    ["travel","Travel Planner","Check weather at another destination."]
+    ["travel","Travel Planner","Check weather at another destination."],
+     ["intelligence","Weather Intelligence","Daily decisions, activity scores, community reports and safety guidance."]
   ].map(([key,title,hint])=><Pressable key={key} onPress={()=>setPage(key)} style={styles.exploreTile}><Text style={styles.exploreTileTitle}>{title}  →</Text><Text style={styles.exploreTileHint}>{hint}</Text></Pressable>)}
 </View> : null}
 {page === "home" ? <>
