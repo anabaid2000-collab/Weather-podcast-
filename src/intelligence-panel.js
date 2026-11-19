@@ -1,5 +1,5 @@
-import React from "react";
-import { Pressable, Text, View } from "react-native";
+import React, { useState } from "react";
+import { Pressable, Text, TextInput, View } from "react-native";
 import { getActivityScores, getSafetyGuidance, getWeatherDecisions } from "./weather-intelligence";
 import { colors, spacing } from "./theme";
 
@@ -28,6 +28,17 @@ export default function IntelligencePanel({ forecast, air, climate, place, onAsk
   const pollen = Object.entries(air?.pollen || {}).filter(([, value]) => Number.isFinite(value));
   const pressureValues = (forecast?.hourly?.pressure_msl || []).slice(0, 6).filter(Number.isFinite);
   const pressureChange = pressureValues.length > 1 ? Math.round(pressureValues[pressureValues.length - 1] - pressureValues[0]) : null;
+  const [eventName, setEventName] = useState("");
+  const [eventDate, setEventDate] = useState(forecast?.daily?.time?.[0] || "");
+  const daily = forecast?.daily || {};
+  const selectedDay = Math.max(0, (daily.time || []).indexOf(eventDate));
+  const eventRain = Number(daily.precipitation_probability_max?.[selectedDay] ?? 100);
+  const eventWind = Number(daily.wind_speed_10m_max?.[selectedDay] ?? 0);
+  const eventUv = Number(daily.uv_index_max?.[selectedDay] ?? 0);
+  const eventCode = Number(daily.weather_code?.[selectedDay] ?? -1);
+  const eventRisk = eventCode >= 95 || eventRain >= 70 || eventWind >= 45 ? "Weather caution" : eventRain >= 40 || eventWind >= 30 || eventUv >= 8 ? "Check conditions closer to the time" : "No major weather concern in this forecast";
+  const eventDetails = "Rain probability " + eventRain + "% · Maximum wind " + Math.round(eventWind) + " km/h · Maximum UV " + Math.round(eventUv) + ".";
+
   return <View style={styles.wrap}>
     <View style={styles.section}>
       <Text style={styles.label}>WEATHER DECISIONS · {place?.name || "YOUR LOCATION"}</Text>
@@ -56,6 +67,18 @@ export default function IntelligencePanel({ forecast, air, climate, place, onAsk
         <Text style={styles.body}>{item.reason}</Text>
       </View>)}
       <Text style={styles.body}>These are transparent planning estimates, not safety guarantees. Check local conditions before activities.</Text>
+    </View>
+    <View style={styles.section}>
+      <Text style={styles.label}>EVENT WEATHER PLANNER</Text>
+      <Text style={styles.title}>Check a plan against the forecast</Text>
+      <TextInput accessibilityLabel="Event name" value={eventName} onChangeText={setEventName} placeholder="Event or outdoor plan" placeholderTextColor={colors.muted} style={{borderWidth:1,borderColor:colors.border,borderRadius:8,padding:10,color:colors.text}}/>
+      <Text style={styles.body}>Choose a day in the available seven-day forecast.</Text>
+      <View style={styles.buttonRow}>
+        {(daily.time || []).slice(0,4).map((date,index)=><Pressable key={date} accessibilityRole="button" onPress={()=>setEventDate(date)} style={[styles.button,{backgroundColor:eventDate===date?colors.panelAlt:colors.panel}]}><Text style={styles.buttonText}>{index===0?"Today":new Date(date+"T12:00:00").toLocaleDateString(undefined,{weekday:"short"})}</Text></Pressable>)}
+      </View>
+      <Text style={styles.answer}>{eventRisk}</Text>
+      <Text style={styles.body}>{eventName.trim() ? eventName.trim()+" · " : ""}{eventDate || "No date selected"} · {eventDetails}</Text>
+      <Text style={styles.warning}>This checks the selected day's forecast only. It does not read or modify your phone calendar, send event notifications, or assess route conditions.</Text>
     </View>
     <View style={styles.section}>
       <Text style={styles.label}>HEALTH AND ENVIRONMENT</Text>
