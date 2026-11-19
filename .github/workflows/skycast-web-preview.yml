@@ -1,0 +1,45 @@
+name: SkyCast web preview
+
+on:
+  push:
+    branches:
+      - skycast-vintage-weather-bureau
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: skycast-web-preview
+  cancel-in-progress: true
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out preview branch
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22.13"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Export web preview
+        run: npx expo export --platform web
+
+      - name: Add GitHub Pages marker
+        run: touch dist/.nojekyll
+
+      - name: Publish preview to gh-pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: gh-pages
+          publish_dir: ./dist
+          force_orphan: true
+          commit_message: "Deploy SkyCast preview from ${{ github.sha }}"
