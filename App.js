@@ -34,7 +34,7 @@ async function getCity(name) {
 }
 async function getWeather(city) {
   const base = "https://api.open-meteo.com/v1/forecast?latitude=" + city.latitude + "&longitude=" + city.longitude;
-  const forecastUrl = base + "&current=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,weather_code,wind_speed_10m,wind_direction_10m,pressure_msl,cloud_cover,visibility&hourly=temperature_2m,precipitation_probability,uv_index,weather_code,relative_humidity_2m,wind_speed_10m,visibility,cloud_cover&minutely_15=precipitation,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,uv_index_max,sunrise,sunset&timezone=auto&forecast_days=7";
+  const forecastUrl = base + "&current=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,weather_code,wind_speed_10m,wind_direction_10m,pressure_msl,cloud_cover,visibility&hourly=temperature_2m,precipitation_probability,uv_index,weather_code,relative_humidity_2m,wind_speed_10m,visibility,cloud_cover,pressure_msl&minutely_15=precipitation,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,uv_index_max,sunrise,sunset&timezone=auto&forecast_days=7";
   const [forecastResponse, airResponse] = await Promise.all([
     fetch(forecastUrl),
     fetch("https://air-quality-api.open-meteo.com/v1/air-quality?latitude=" + city.latitude + "&longitude=" + city.longitude + "&hourly=us_aqi,pm2_5,pm10,alder_pollen,birch_pollen,grass_pollen,mugwort_pollen,olive_pollen,ragweed_pollen&timezone=auto&forecast_days=1").catch(() => null)
@@ -386,7 +386,7 @@ export default function App() {
       : current && daily ? <>
         {error ? <Text style={styles.inlineError}>{error}</Text> : null}
 {page === "radio" ? <ForecastFM place={place} forecast={data.forecast} air={data.air} unit={unit}/> : null}
-{page === "intelligence" ? <IntelligencePanel forecast={data.forecast} place={place} onAsk={() => setPage("radio")} onReport={reportWeather} reportStatus={communityStatus} reports={communityReports}/> : null}
+{page === "intelligence" ? <IntelligencePanel forecast={data.forecast} air={data.air} place={place} onAsk={() => setPage("radio")} onReport={reportWeather} reportStatus={communityStatus} reports={communityReports}/> : null}
  {page === "forecast" ? <View style={styles.section}>
   <Text style={styles.sectionTitle}>The week ahead</Text>
   <Text style={styles.muted}>A seven-day view for {place?.name || "your location"}.</Text>
