@@ -7,6 +7,35 @@ service cloud.firestore {
         allow read, write: if request.auth != null && request.auth.uid == userId;
       }
     }
+
+    match /communityWeatherReports/{reportId} {
+      allow read: if true;
+      allow create: if request.auth != null
+        && request.resource.data.keys().hasOnly([
+          'observation', 'city', 'country', 'latitudeRounded',
+          'longitudeRounded', 'source', 'createdAt'
+        ])
+        && request.resource.data.keys().hasAll([
+          'observation', 'city', 'country', 'latitudeRounded',
+          'longitudeRounded', 'source', 'createdAt'
+        ])
+        && request.resource.data.observation in ['raining', 'not_raining']
+        && request.resource.data.city is string
+        && request.resource.data.city.size() > 0
+        && request.resource.data.city.size() <= 80
+        && (request.resource.data.country == null
+          || (request.resource.data.country is string && request.resource.data.country.size() <= 80))
+        && request.resource.data.latitudeRounded is number
+        && request.resource.data.latitudeRounded >= -90
+        && request.resource.data.latitudeRounded <= 90
+        && request.resource.data.longitudeRounded is number
+        && request.resource.data.longitudeRounded >= -180
+        && request.resource.data.longitudeRounded <= 180
+        && request.resource.data.source == 'SkyCast community report'
+        && request.resource.data.createdAt == request.time;
+      allow update, delete: if false;
+    }
+
     match /{document=**} {
       allow read, write: if false;
     }
