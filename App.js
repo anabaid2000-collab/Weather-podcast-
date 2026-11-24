@@ -10,6 +10,7 @@ import { registerForPushNotificationsAsync } from "./src/notifications";
 import { colors, spacing, radius } from "./src/theme";
 import ForecastFM from "./src/forecast-fm"; // native Forecast FM integration
 import IntelligencePanel from "./src/intelligence-panel";
+import { getActivityScores, getWeatherDecisions } from "./src/weather-intelligence";
 
 const FAVORITES_KEY = "skycast.favoriteCities.v1";
 const weatherCodes = {
@@ -392,6 +393,8 @@ export default function App() {
     return "Today in " + place.name + ", expect " + describe(current.weather_code)[0].toLowerCase() + " with a temperature of " + Math.round(current.temperature_2m) + "°C, feeling like " + Math.round(current.apparent_temperature) + "°C. Today's high is " + Math.round(daily.temperature_2m_max[0]) + "°C and the low is " + Math.round(daily.temperature_2m_min[0]) + "°C. " + advice + " " + uvAdvice;
   }, [current, daily, place]);
 
+  const homeDecisions = getWeatherDecisions(data?.forecast);
+  const homeActivityScores = getActivityScores(data?.forecast);
   const aqi = data?.air?.aqi;
   const aqiLabel = !Number.isFinite(aqi) ? "Unavailable" : aqi <= 50 ? "Good" : aqi <= 100 ? "Moderate" : aqi <= 150 ? "Sensitive groups" : aqi <= 200 ? "Unhealthy" : aqi <= 300 ? "Very unhealthy" : "Hazardous";
 
@@ -477,6 +480,48 @@ export default function App() {
           <Pressable onPress={() => Linking.openURL("https://www.openstreetmap.org/?mlat=" + place.latitude + "&mlon=" + place.longitude + "#map=10/" + place.latitude + "/" + place.longitude)} style={styles.mapLink}><Text style={styles.mapLinkText}>⌖  View this city on map</Text></Pressable>
         </View>
 </> : null}
+
+
+{page === "home" ? <>
+        <View style={{backgroundColor:"#0F2230",borderRadius:6,padding:16,marginTop:8,gap:8}}>
+          <Text style={{color:"#F2B84B",fontSize:10,fontWeight:"800",letterSpacing:1.5}}>FORECAST FM</Text>
+          <Text style={{color:"#F8FBFC",fontSize:21,fontWeight:"700"}}>Your weather briefing</Text>
+          <Text style={{color:"#C7D8E0",fontSize:12,lineHeight:18}}>A spoken update for {place?.name || "your city"}, using the latest forecast data.</Text>
+          <Pressable accessibilityRole="button" onPress={()=>setPage("radio")} style={{alignSelf:"flex-start",backgroundColor:"#F2B84B",borderRadius:3,paddingHorizontal:14,paddingVertical:10}}>
+            <Text style={{color:"#0F2230",fontSize:12,fontWeight:"800"}}>Open Forecast FM</Text>
+          </Pressable>
+        </View>
+        <View style={styles.section}>
+          <View style={styles.sectionTop}><Text style={styles.sectionTitle}>Your day, decided</Text><Text style={styles.eyebrow}>PRACTICAL GUIDANCE</Text></View>
+          <View style={{borderTopWidth:1,borderTopColor:colors.border,paddingTop:12,gap:4}}>
+            <Text style={{color:colors.text,fontSize:17,fontWeight:"800"}}>{homeDecisions.umbrella.answer}</Text>
+            <Text style={styles.muted}>{homeDecisions.umbrella.detail}</Text>
+          </View>
+          <View style={{borderTopWidth:1,borderTopColor:colors.border,paddingTop:12,gap:4}}>
+            <Text style={{color:colors.text,fontSize:17,fontWeight:"800"}}>{homeDecisions.laundry.answer}</Text>
+            <Text style={styles.muted}>{homeDecisions.laundry.detail}</Text>
+          </View>
+          <View style={{borderTopWidth:1,borderTopColor:colors.border,paddingTop:12,gap:4}}>
+            <Text style={styles.eyebrow}>RAIN TIMING</Text>
+            <Text style={styles.muted}>{homeDecisions.rainTiming.detail}</Text>
+          </View>
+          <Pressable accessibilityRole="button" onPress={()=>setPage("intelligence")} style={{alignSelf:"flex-start",borderWidth:1,borderColor:colors.border,borderRadius:3,paddingHorizontal:12,paddingVertical:9}}>
+            <Text style={{color:colors.accentDark,fontSize:12,fontWeight:"800"}}>More weather intelligence</Text>
+          </Pressable>
+        </View>
+        <View style={styles.section}>
+          <View style={styles.sectionTop}><Text style={styles.sectionTitle}>Good for</Text><Text style={styles.eyebrow}>ACTIVITY SCORES</Text></View>
+          {homeActivityScores.map(item=><View key={"home-"+item.id} style={{flexDirection:"row",alignItems:"center",gap:10,paddingVertical:5}}>
+            <Text style={{color:colors.text,fontSize:12,fontWeight:"700",width:88}}>{item.label}</Text>
+            <View style={{height:4,flex:1,backgroundColor:colors.border,overflow:"hidden"}}>
+              <View style={{height:4,width:item.score+"%",backgroundColor:colors.accentDark}}/>
+            </View>
+            <Text style={{color:colors.text,fontSize:12,fontWeight:"800",width:32,textAlign:"right"}}>{item.score}</Text>
+          </View>)}
+          <Text style={styles.muted}>Planning estimates from rain, wind, UV, visibility and temperature. Not a safety guarantee.</Text>
+        </View>
+      </> : null}
+
 
 
 
