@@ -12,6 +12,7 @@ import ForecastFM from "./src/forecast-fm"; // native Forecast FM integration
 import IntelligencePanel from "./src/intelligence-panel";
 import { getActivityScores, getWeatherDecisions } from "./src/weather-intelligence";
 import { clockLabel, dayLabel, describe, getCity, getWeather, number } from "./src/weather-service";
+import BottomNavigation from "./src/components/bottom-navigation";
 
 const FAVORITES_KEY = "skycast.favoriteCities.v1";
 
@@ -683,17 +684,7 @@ export default function App() {
       <Pressable onPress={() => loadCity(place?.name || query)} style={styles.refresh}><Text style={styles.refreshText}>↻  Refresh the forecast</Text></Pressable>
       </> : null}
     </ScrollView>
-    <View style={styles.bottomNav}>
-      {[
-        ["home","Home","⌂"],["forecast","Forecast","◷"],["explore","Explore","◇"],["radio","Radio","◉"],["more","More","•••"]
-      ].map(([key,label,symbol]) => {
-        const selected = key === page || (key === "explore" && ["rain","travel","intelligence"].includes(page)) || (key === "more" && page === "dashboard");
-        return <Pressable key={key} accessibilityRole="button" accessibilityState={{selected}} onPress={()=>setPage(key)} style={styles.bottomNavItem}>
-          <Text style={[styles.bottomNavIcon,selected&&styles.bottomNavIconActive]}>{symbol}</Text>
-          <Text style={[styles.bottomNavLabel,selected&&styles.bottomNavLabelActive]}>{label}</Text>
-        </Pressable>;
-      })}
-    </View>
+    <BottomNavigation page={page} onNavigate={setPage} />
   </View>;
 }
 
@@ -999,12 +990,6 @@ const styles = StyleSheet.create({
   catCaptionText:{color:"#34472A",fontSize:10,fontWeight:"800",backgroundColor:"rgba(255,253,246,0.92)",paddingHorizontal:12,paddingVertical:5,borderRadius:4,overflow:"hidden"},
 
   screen:{flex:1,backgroundColor:colors.background},screenDay:{backgroundColor:"#F3F2E8"},screenRain:{backgroundColor:"#E9ECD9"},screenNight:{backgroundColor:"#E4E9D5"},content:{padding:spacing.lg,paddingTop:34,paddingBottom:116,gap:spacing.lg},
-  bottomNav:{position:"absolute",left:12,right:12,bottom:12,minHeight:68,backgroundColor:"#34472A",borderRadius:6,borderWidth:1,borderColor:"#53652C",flexDirection:"row",alignItems:"center",justifyContent:"space-around",paddingHorizontal:7,paddingVertical:7,elevation:5,shadowColor:"#34472A",shadowOpacity:.14,shadowRadius:8,shadowOffset:{width:0,height:3}},
-  bottomNavItem:{flex:1,minHeight:50,alignItems:"center",justifyContent:"center",gap:3,borderRadius:4},
-  bottomNavIcon:{fontSize:19,color:"#F3F2E8",fontWeight:"700"},
-  bottomNavIconActive:{color:"#D7ED82"},
-  bottomNavLabel:{fontSize:10,color:"#F3F2E8",fontWeight:"600"},
-  bottomNavLabelActive:{color:"#D7ED82",fontWeight:"900"},
   exploreTile:{backgroundColor:"#FFFDF6",borderWidth:1,borderColor:"#D8DCC2",borderRadius:6,padding:18,gap:8,marginTop:8},
   exploreTileTitle:{color:colors.text,fontSize:15,fontWeight:"800"},
   exploreTileHint:{color:colors.muted,fontSize:12,lineHeight:18},
