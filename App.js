@@ -13,6 +13,7 @@ import IntelligencePanel from "./src/intelligence-panel";
 import { getActivityScores, getWeatherDecisions } from "./src/weather-intelligence";
 import { clockLabel, dayLabel, describe, getCity, getWeather, number } from "./src/weather-service";
 import BottomNavigation from "./src/components/bottom-navigation";
+import ForecastScreen from "./src/screens/forecast-screen";
 
 const FAVORITES_KEY = "skycast.favoriteCities.v1";
 
@@ -386,19 +387,7 @@ export default function App() {
         {error ? <Text style={styles.inlineError}>{error}</Text> : null}
 {page === "radio" ? <ForecastFM place={place} forecast={data.forecast} air={data.air} unit={unit}/> : null}
 {page === "intelligence" ? <IntelligencePanel forecast={data.forecast} air={data.air} climate={data.climate} place={place} onAsk={() => setPage("radio")} onReport={reportWeather} reportStatus={communityStatus} reports={communityReports} routeDestination={routeDestination} onRouteDestinationChange={setRouteDestination} onCheckRoute={checkRouteWeather} routeResult={routeResult} routeStatus={routeStatus}/> : null}
- {page === "forecast" ? <View style={styles.section}>
-  <Text style={styles.sectionTitle}>The week ahead</Text>
-  <Text style={styles.muted}>A seven-day view for {place?.name || "your location"}.</Text>
-  <View style={styles.forecast}>
-    {daily.time.map((date,i) => { const w=describe(daily.weather_code[i]); return <View key={"forecast-tab-"+date} style={styles.forecastRow}>
-      <Text style={styles.day}>{dayLabel(date,i)}</Text><Text style={styles.forecastIcon}>{w[1]}</Text><Text style={styles.forecastCondition}>{w[0]}</Text>
-      <Text style={styles.high}>{temp(daily.temperature_2m_max[i])}</Text><Text style={styles.low}>{temp(daily.temperature_2m_min[i])}</Text>
-      <Text style={styles.rainChance}>{number(daily.precipitation_probability_max[i],"%")}</Text>
-    </View>; })}
-  </View>
-  <Text style={styles.timestamp}>Hourly details and spoken briefings are available in Forecast FM.</Text>
-  <Pressable onPress={()=>setPage("radio")} style={styles.exploreTile}><Text style={styles.exploreTileTitle}>Listen to Forecast FM →</Text><Text style={styles.exploreTileHint}>Choose a presenter and hear today's outlook.</Text></Pressable>
-</View> : null}
+ {page === "forecast" ? <ForecastScreen daily={daily} place={place} describe={describe} dayLabel={dayLabel} temp={temp} number={number} styles={styles} onOpenRadio={() => setPage("radio")} /> : null}
 {page === "explore" ? <View style={styles.section}>
   <Text style={styles.sectionTitle}>Explore your atmosphere</Text>
   <Text style={styles.muted}>Choose a weather tool for {place?.name || "your city"}.</Text>
