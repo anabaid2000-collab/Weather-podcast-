@@ -81,7 +81,6 @@ export default function IntelligencePanel({ forecast, air, climate, place, onAsk
       <Text style={styles.warning}>This checks the selected day's forecast only. It does not read or modify your phone calendar, send event notifications, or assess route conditions.</Text>
     </View>
     <View style={styles.section}>
-    <View style={styles.section}>
       <Text style={styles.label}>ROUTE WEATHER CHECK</Text>
       <Text style={styles.title}>Compare weather along your trip</Text>
       <Text style={styles.body}>Starting city: {place?.name || "Unavailable"}</Text>
@@ -136,7 +135,7 @@ export default function IntelligencePanel({ forecast, air, climate, place, onAsk
       <Text style={styles.title}>Ask a weather question</Text>
       <Text style={styles.body}>Ask the Forecast already supports weather questions and uses the latest loaded forecast snapshot.</Text>
       <Pressable accessibilityRole="button" onPress={onAsk} style={[styles.button,{flex:0}]}><Text style={styles.buttonText}>Open Ask the Forecast</Text></Pressable>
-      <Text style={styles.body}>Calendar-aware event alerts, live route-risk feeds, pollen-specific forecasts, long-term climate comparisons and camera-based AR are next integrations. They will only be shown as active when their data providers, permissions and device capabilities are connected.</Text>
+      <Text style={styles.body}>Device calendar access and event notifications, route-path risk feeds, camera-based AR overlays and offline safety caching remain future integrations. The event planner and city-to-city weather comparison above are limited to the forecast data currently available.</Text>
     </View>
   </View>;
 }
