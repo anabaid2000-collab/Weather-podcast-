@@ -2,27 +2,28 @@
 // The app uses a bright sky-blue day palette; weather scenes supply the
 // atmospheric variation for rain, sunset and night without changing data logic.
 export const colors = {
-  background: "#F3F8FF",
-  panel: "#FFFFFF",
-  panelAlt: "#E8F2FC",
-  border: "#D8E7F5",
-  text: "#203B56",
-  muted: "#71849A",
-  accent: "#287FC5",
-  accentDark: "#1D639E",
-  teal: "#3D9FA8",
-  tealDark: "#287783",
-  navy: "#183A5B",
-  brass: "#8FB9DE",
-  sky: "#B8D9F4",
-  success: "#39856B",
-  warning: "#B77C32",
+  // SkyCast reference palette: cool coastal blue, slate ink and warm amber.
+  background: "#EEF6F7",
+  panel: "#F8FBFC",
+  panelAlt: "#BFE0EE",
+  border: "rgba(16, 34, 47, 0.17)",
+  text: "#10222F",
+  muted: "#48606F",
+  accent: "#7FB7C9",
+  accentDark: "#315F73",
+  teal: "#4F9D9A",
+  tealDark: "#315F73",
+  navy: "#0F2230",
+  brass: "#F2B84B",
+  sky: "#BFE0EE",
+  success: "#3F8E76",
+  warning: "#A96C1D",
   danger: "#B94F55",
-  overlay: "rgba(16, 31, 49, 0.48)",
-  onAccent: "#FFFFFF",
+  overlay: "rgba(8, 19, 31, 0.55)",
+  onAccent: "#0F2230",
 };
 export const spacing = { xs:4, sm:8, md:16, lg:24, xl:32, xxl:40 };
-export const radius = { sm:10, md:16, lg:22, xl:28, full:9999 };
+export const radius = { sm:3, md:4, lg:6, xl:8, full:9999 };
 export const typography = {
   display:{fontFamily:"sans-serif",fontSize:36,lineHeight:42,fontWeight:"800"},
   title:{fontFamily:"sans-serif",fontSize:27,lineHeight:33,fontWeight:"800"},
