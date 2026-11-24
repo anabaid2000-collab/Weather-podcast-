@@ -5,7 +5,7 @@ import { colors, spacing } from "./theme";
 
 const styles = {
   wrap: { gap: spacing.md },
-  section: { backgroundColor: colors.panel, borderWidth: 1, borderColor: colors.border, borderRadius: 16, padding: spacing.md, gap: 10 },
+  section: { backgroundColor: colors.panel, borderWidth: 1, borderColor: colors.border, borderRadius: 6, padding: spacing.md, gap: 10 },
   title: { color: colors.navy, fontSize: 18, fontWeight: "800" },
   label: { color: colors.muted, fontSize: 10, fontWeight: "800", letterSpacing: 1 },
   answer: { color: colors.text, fontSize: 19, fontWeight: "800" },
@@ -15,7 +15,7 @@ const styles = {
   track: { height: 7, flex: 1, backgroundColor: colors.panelAlt, overflow: "hidden", borderRadius: 4 },
   fill: { height: 7, backgroundColor: colors.accent, borderRadius: 4 },
   buttonRow: { flexDirection: "row", gap: 8 },
-  button: { borderWidth: 1, borderColor: colors.border, paddingVertical: 10, paddingHorizontal: 12, borderRadius: 8, flex: 1, alignItems: "center" },
+  button: { borderWidth: 1, borderColor: colors.border, paddingVertical: 10, paddingHorizontal: 12, borderRadius: 3, flex: 1, alignItems: "center" },
   buttonText: { color: colors.accentDark, fontSize: 12, fontWeight: "800" },
   warning: { color: colors.warning, fontSize: 12, fontWeight: "700" }
 };
@@ -71,7 +71,7 @@ export default function IntelligencePanel({ forecast, air, climate, place, onAsk
     <View style={styles.section}>
       <Text style={styles.label}>EVENT WEATHER PLANNER</Text>
       <Text style={styles.title}>Check a plan against the forecast</Text>
-      <TextInput accessibilityLabel="Event name" value={eventName} onChangeText={setEventName} placeholder="Event or outdoor plan" placeholderTextColor={colors.muted} style={{borderWidth:1,borderColor:colors.border,borderRadius:8,padding:10,color:colors.text}}/>
+      <TextInput accessibilityLabel="Event name" value={eventName} onChangeText={setEventName} placeholder="Event or outdoor plan" placeholderTextColor={colors.muted} style={{borderWidth:1,borderColor:colors.border,borderRadius:3,padding:10,color:colors.text}}/>
       <Text style={styles.body}>Choose a day in the available seven-day forecast.</Text>
       <View style={styles.buttonRow}>
         {(daily.time || []).slice(0,4).map((date,index)=><Pressable key={date} accessibilityRole="button" onPress={()=>setEventDate(date)} style={[styles.button,{backgroundColor:eventDate===date?colors.panelAlt:colors.panel}]}><Text style={styles.buttonText}>{index===0?"Today":new Date(date+"T12:00:00").toLocaleDateString(undefined,{weekday:"short"})}</Text></Pressable>)}
