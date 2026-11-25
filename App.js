@@ -14,6 +14,7 @@ import { getActivityScores, getWeatherDecisions } from "./src/weather-intelligen
 import { clockLabel, dayLabel, describe, getCity, getWeather, number } from "./src/weather-service";
 import BottomNavigation from "./src/components/bottom-navigation";
 import ForecastScreen from "./src/screens/forecast-screen";
+import ExploreScreen from "./src/screens/explore-screen";
 
 const FAVORITES_KEY = "skycast.favoriteCities.v1";
 
@@ -388,15 +389,7 @@ export default function App() {
 {page === "radio" ? <ForecastFM place={place} forecast={data.forecast} air={data.air} unit={unit}/> : null}
 {page === "intelligence" ? <IntelligencePanel forecast={data.forecast} air={data.air} climate={data.climate} place={place} onAsk={() => setPage("radio")} onReport={reportWeather} reportStatus={communityStatus} reports={communityReports} routeDestination={routeDestination} onRouteDestinationChange={setRouteDestination} onCheckRoute={checkRouteWeather} routeResult={routeResult} routeStatus={routeStatus}/> : null}
  {page === "forecast" ? <ForecastScreen daily={daily} place={place} describe={describe} dayLabel={dayLabel} temp={temp} number={number} styles={styles} onOpenRadio={() => setPage("radio")} /> : null}
-{page === "explore" ? <View style={styles.section}>
-  <Text style={styles.sectionTitle}>Explore your atmosphere</Text>
-  <Text style={styles.muted}>Choose a weather tool for {place?.name || "your city"}.</Text>
-  {[
-    ["rain","Rain, Air & Sun","Rain chances, air quality, UV, sunrise and sunset."],
-    ["travel","Travel Planner","Check weather at another destination."],
-     ["intelligence","Weather Intelligence","Daily decisions, activity scores, community reports and safety guidance."]
-  ].map(([key,title,hint])=><Pressable key={key} onPress={()=>setPage(key)} style={styles.exploreTile}><Text style={styles.exploreTileTitle}>{title}  →</Text><Text style={styles.exploreTileHint}>{hint}</Text></Pressable>)}
-</View> : null}
+{page === "explore" ? <ExploreScreen place={place} styles={styles} onNavigate={setPage} /> : null}
 {page === "home" ? <>
         <View style={styles.hero}>
           <WeatherModeScene mode={weatherMode} code={current.weather_code} windSpeed={current.wind_speed_10m} temperature={temp(current.temperature_2m)} feelsLike={temp(current.apparent_temperature)} condition={condition[0]} time={current.time} place={place?.name}/>
