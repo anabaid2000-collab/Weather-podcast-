@@ -60,7 +60,7 @@ export default function App() {
       lastWeatherRefresh.current = Date.now();
       try { await AsyncStorage.setItem("skycast.lastWeather.v1", JSON.stringify({ place: city, data: result, savedAt: Date.now() })); } catch {}
     } catch (err) {
-      if (requestId === latestWeatherRequest.current) setError(err.message || "Could not load weather.");
+      if (requestId === latestWeatherRequest.current) { setError(err.message || "Could not load weather."); setOfflineCopy(true); }
     } finally {
       if (requestId === latestWeatherRequest.current) setLoading(false);
     }
@@ -364,7 +364,7 @@ export default function App() {
     <ScrollView contentInsetAdjustmentBehavior="automatic" keyboardShouldPersistTaps="handled" contentContainerStyle={styles.content}>
       <View style={styles.top}>
         <View><Text style={styles.brand}>SKYCAST</Text><Text style={styles.eyebrow}>WEATHER, IN A CLEARER LIGHT</Text></View>
-        <Text style={styles.live}>● LIVE DATA</Text>
+        <Text style={styles.live}>{offlineCopy && current ? "● SAVED FORECAST" : "● LIVE DATA"}</Text>
       </View>
       {page !== "home" ? <Text style={styles.pageHeading}>{({rain:"Rain, Air & Sun",travel:"Travel Planner",forecast:"Your forecast",radio:"Forecast FM",explore:"Explore",intelligence:"Weather Intelligence",dashboard:"Personal Dashboard",more:"More tools"})[page]}</Text> : null}
 {page === "home" ? <>
@@ -382,10 +382,11 @@ export default function App() {
       </View> : null}
 
 </> : null}
-      {loading ? <View style={styles.state}><ActivityIndicator size="large" color={colors.accent}/><Text style={styles.muted}>Consulting the weather bureau…</Text></View>
+      {loading && !current ? <View style={styles.state} accessibilityRole="progressbar" accessibilityLabel="Loading weather forecast"><ActivityIndicator size="large" color={colors.accent}/><Text style={styles.muted}>Consulting the weather bureau…</Text></View>
       : error && !current ? <View style={styles.state}><Text style={styles.weatherIcon}>≋</Text><Text style={styles.cardTitle}>Forecast temporarily unavailable</Text><Text style={styles.muted}>{error}</Text><Pressable onPress={() => loadCity(query)} style={styles.retry}><Text style={styles.buttonText}>Try again</Text></Pressable></View>
       : current && daily ? <>
-        {error ? <Text style={styles.inlineError}>{error}</Text> : null}
+        {loading ? <Text style={styles.inlineError}>Refreshing forecast. Showing the last available update.</Text> : null}
+         {error ? <Text style={styles.inlineError}>{offlineCopy ? "Could not refresh live weather. " : ""}{error}</Text> : null}
 {page === "radio" ? <ForecastFM place={place} forecast={data.forecast} air={data.air} unit={unit}/> : null}
 {page === "intelligence" ? <IntelligencePanel forecast={data.forecast} air={data.air} climate={data.climate} place={place} onAsk={() => setPage("radio")} onReport={reportWeather} reportStatus={communityStatus} reports={communityReports} routeDestination={routeDestination} onRouteDestinationChange={setRouteDestination} onCheckRoute={checkRouteWeather} routeResult={routeResult} routeStatus={routeStatus}/> : null}
  {page === "forecast" ? <ForecastScreen daily={daily} place={place} describe={describe} dayLabel={dayLabel} temp={temp} number={number} styles={styles} onOpenRadio={() => setPage("radio")} /> : null}
