@@ -4,7 +4,7 @@
     "slug": "weather-podcast-",
     "version": "1.3.0",
     "orientation": "portrait",
-    "userInterfaceStyle": "dark",
+    "userInterfaceStyle": "light",
     "android": {
       "package": "com.skycast.weatherpodcast",
       "runtimeVersion": "1.3.0",
@@ -24,6 +24,13 @@
     },
     "plugins": [
       "expo-notifications"
-    ]
+    ],
+    "web": {
+      "bundler": "metro",
+      "output": "single"
+    },
+    "experiments": {
+      "baseUrl": "/Weather-podcast-"
+    }
   }
 }
